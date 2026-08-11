@@ -139,8 +139,8 @@ function listServices() {
     const coordinatorName = String(row[headers.coordinatorName] || row[2] || "").trim();
     const contactNumber = String(row[headers.contactNumber] || row[3] || "").trim();
     const reportingTime = String(row[headers.reportingTime] || row[4] || "").trim();
-    const requiredCount = Number(row[headers.requiredCount] || row[5] || 0);
-    const photoUrl = String(row[headers.photoUrl] || row[6] || "").trim();
+    const requiredCount = Number(row[headers.requiredCount] || row[6] || row[5] || 0);
+    const photoUrl = String(row[headers.photoUrl] || row[5] || row[6] || "").trim();
     const active = headers.active >= 0 ? String(row[headers.active] || "").trim().toLowerCase() !== "false" : true;
 
     return {
@@ -342,8 +342,8 @@ function buildHeaderMap(headerRow) {
     coordinatorName: findHeaderIndex_(normalized, ["coordinator name"]),
     contactNumber: findHeaderIndex_(normalized, ["coordinator contact number", "contact number"]),
     reportingTime: findHeaderIndex_(normalized, ["reporting time"]),
-    requiredCount: findHeaderIndex_(normalized, ["required count", "number of volunteers required"]),
-    photoUrl: findHeaderIndex_(normalized, ["coordinator photo link", "photo url"]),
+    requiredCount: findHeaderIndex_(normalized, ["required count", "number of volunteers required", "no of required volunteers"]),
+    photoUrl: findHeaderIndex_(normalized, ["coordinator photo link", "photo url", "photo"]),
     active: findHeaderIndex_(normalized, ["active"])
   };
 }
