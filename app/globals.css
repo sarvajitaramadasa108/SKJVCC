@@ -471,6 +471,12 @@ button:disabled {
   font-size: 11px;
 }
 
+.service-name-large {
+  font-size: 13px !important;
+  line-height: 1.2;
+  font-weight: 800;
+}
+
 .service-cell select {
   min-height: 30px;
   padding: 4px 6px;
@@ -481,6 +487,38 @@ button:disabled {
   min-height: 28px;
   padding: 4px 8px;
   font-size: 10px;
+}
+
+.link-button-small {
+  font-size: 11px;
+}
+
+.saving-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--accent-2);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.loading-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(15, 118, 110, 0.2);
+  border-top-color: var(--accent-2);
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .image-modal {
