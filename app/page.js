@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AssignedVolunteersPanel from "@/components/AssignedVolunteersPanel";
 
 export default function HomePage() {
   return (
@@ -21,6 +22,8 @@ export default function HomePage() {
           <p>Select a service, inspect the assigned volunteers, and download the result as Excel.</p>
         </Link>
       </section>
+
+      <AssignedVolunteersPanel />
     </main>
   );
 }
