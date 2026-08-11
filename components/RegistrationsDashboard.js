@@ -200,114 +200,6 @@ export default function RegistrationsDashboard() {
       <section className="panel table-panel">
         <div className="panel-head">
           <div>
-            <h2>Live registrations</h2>
-            <p className="subtle-dark">These volunteers do not have a service assigned yet.</p>
-          </div>
-        </div>
-
-        {liveRegistrations.length ? (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>S No</th>
-                  <th>Full Name</th>
-                  <th>Age</th>
-                  <th>Gender</th>
-                  <th>Mobile Number</th>
-                  <th>Devotee in Touch</th>
-                  <th>Area of Staying in Vizag</th>
-                  {AVAILABILITY_COLUMNS.map((column) => (
-                    <th key={column}>{column}</th>
-                  ))}
-                  <th>Photo</th>
-                  <th>Service</th>
-                </tr>
-              </thead>
-              <tbody>
-                {liveRegistrations.map((row) => {
-                  const isEditing = editingRow === row.sourceRow;
-                  const serviceOptions = services.map((service) => service.serviceName).filter(Boolean);
-                  return (
-                    <tr key={row.sourceRow}>
-                      <td>{row.serialNo || row.sourceRow || "-"}</td>
-                      <td>{row.fullName || "-"}</td>
-                      <td>{row.age || "-"}</td>
-                      <td>{row.gender || "-"}</td>
-                      <td>{row.mobileNumber || "-"}</td>
-                      <td>{row.devoteeInTouch || "-"}</td>
-                      <td>{row.areaOfStay || "-"}</td>
-                      {row.availabilityFlags?.length ? (
-                        row.availabilityFlags.map((flag) => (
-                          <td key={`${row.sourceRow}-${flag.label}`}>
-                            <span className={flag.available ? "badge badge-yes" : "badge badge-no"}>
-                              {flag.available ? "Available" : "Not available"}
-                            </span>
-                          </td>
-                        ))
-                      ) : (
-                        AVAILABILITY_COLUMNS.map((column) => (
-                          <td key={`${row.sourceRow}-${column}`}>
-                            <span className="badge badge-no">Not available</span>
-                          </td>
-                        ))
-                      )}
-                      <td>
-                        <button
-                          type="button"
-                          className="secondary tiny-button"
-                          onClick={() => openPhotoPreview(row)}
-                          disabled={!row.photoUpload}
-                        >
-                          View Image
-                        </button>
-                      </td>
-                      <td>
-                        <div className="service-cell">
-                          {savingRow === row.sourceRow ? (
-                            <div className="saving-pill">
-                              <span className="loading-spinner" aria-hidden="true" />
-                              <span>Saving...</span>
-                            </div>
-                          ) : (
-                            <>
-                              <select
-                                value={row.assignedService || ""}
-                                onChange={(event) => handleAssignService(row, event.target.value)}
-                                disabled={savingRow === row.sourceRow || !serviceOptions.length}
-                              >
-                                <option value="">{serviceOptions.length ? "Assign service" : "No services yet"}</option>
-                                {serviceOptions.map((serviceName) => (
-                                  <option key={serviceName} value={serviceName}>
-                                    {serviceName}
-                                  </option>
-                                ))}
-                              </select>
-                              {row.assignedService ? (
-                                <button type="button" className="link-button" onClick={() => setEditingRow(null)}>
-                                  Cancel
-                                </button>
-                              ) : null}
-                            </>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="empty-state">
-            {refreshing ? "Loading latest registrations..." : "No registrations found yet."}
-          </div>
-        )}
-      </section>
-
-      <section className="panel table-panel">
-        <div className="panel-head">
-          <div>
             <h2>Assigned volunteers</h2>
             <p className="subtle-dark">These volunteers already have a service and can be edited here.</p>
           </div>
@@ -420,6 +312,114 @@ export default function RegistrationsDashboard() {
         ) : (
           <div className="empty-state">
             {refreshing ? "Loading assigned volunteers..." : "No assigned volunteers yet."}
+          </div>
+        )}
+      </section>
+
+      <section className="panel table-panel">
+        <div className="panel-head">
+          <div>
+            <h2>Live registrations</h2>
+            <p className="subtle-dark">These volunteers do not have a service assigned yet.</p>
+          </div>
+        </div>
+
+        {liveRegistrations.length ? (
+          <div className="table-wrap">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>S No</th>
+                  <th>Full Name</th>
+                  <th>Age</th>
+                  <th>Gender</th>
+                  <th>Mobile Number</th>
+                  <th>Devotee in Touch</th>
+                  <th>Area of Staying in Vizag</th>
+                  {AVAILABILITY_COLUMNS.map((column) => (
+                    <th key={column}>{column}</th>
+                  ))}
+                  <th>Photo</th>
+                  <th>Service</th>
+                </tr>
+              </thead>
+              <tbody>
+                {liveRegistrations.map((row) => {
+                  const isEditing = editingRow === row.sourceRow;
+                  const serviceOptions = services.map((service) => service.serviceName).filter(Boolean);
+                  return (
+                    <tr key={row.sourceRow}>
+                      <td>{row.serialNo || row.sourceRow || "-"}</td>
+                      <td>{row.fullName || "-"}</td>
+                      <td>{row.age || "-"}</td>
+                      <td>{row.gender || "-"}</td>
+                      <td>{row.mobileNumber || "-"}</td>
+                      <td>{row.devoteeInTouch || "-"}</td>
+                      <td>{row.areaOfStay || "-"}</td>
+                      {row.availabilityFlags?.length ? (
+                        row.availabilityFlags.map((flag) => (
+                          <td key={`${row.sourceRow}-${flag.label}`}>
+                            <span className={flag.available ? "badge badge-yes" : "badge badge-no"}>
+                              {flag.available ? "Available" : "Not available"}
+                            </span>
+                          </td>
+                        ))
+                      ) : (
+                        AVAILABILITY_COLUMNS.map((column) => (
+                          <td key={`${row.sourceRow}-${column}`}>
+                            <span className="badge badge-no">Not available</span>
+                          </td>
+                        ))
+                      )}
+                      <td>
+                        <button
+                          type="button"
+                          className="secondary tiny-button"
+                          onClick={() => openPhotoPreview(row)}
+                          disabled={!row.photoUpload}
+                        >
+                          View Image
+                        </button>
+                      </td>
+                      <td>
+                        <div className="service-cell">
+                          {savingRow === row.sourceRow ? (
+                            <div className="saving-pill">
+                              <span className="loading-spinner" aria-hidden="true" />
+                              <span>Saving...</span>
+                            </div>
+                          ) : (
+                            <>
+                              <select
+                                value={row.assignedService || ""}
+                                onChange={(event) => handleAssignService(row, event.target.value)}
+                                disabled={savingRow === row.sourceRow || !serviceOptions.length}
+                              >
+                                <option value="">{serviceOptions.length ? "Assign service" : "No services yet"}</option>
+                                {serviceOptions.map((serviceName) => (
+                                  <option key={serviceName} value={serviceName}>
+                                    {serviceName}
+                                  </option>
+                                ))}
+                              </select>
+                              {row.assignedService ? (
+                                <button type="button" className="link-button" onClick={() => setEditingRow(null)}>
+                                  Cancel
+                                </button>
+                              ) : null}
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="empty-state">
+            {refreshing ? "Loading latest registrations..." : "No registrations found yet."}
           </div>
         )}
       </section>
