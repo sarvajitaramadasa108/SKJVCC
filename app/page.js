@@ -1,5 +1,4 @@
 import Link from "next/link";
-import PortalNav from "@/components/PortalNav";
 
 export default function HomePage() {
   return (
@@ -12,7 +11,6 @@ export default function HomePage() {
             Watch registrations update in real time, preview uploaded photos, assign services inline, and export service-wise volunteer lists when you need them.
           </p>
         </div>
-        <PortalNav />
       </header>
 
       <section className="hero hero-home">
