@@ -57,6 +57,7 @@ function syncFormResponsesToMaster() {
     const sourceRow = i + 1;
     const row = values[i];
     const record = mapFormResponseRow_(row, formHeaders, sourceRow, masterIndex[sourceRow]);
+    if (!record) continue;
     upsertMasterRow_(master, record, masterIndex[sourceRow]);
     synced += 1;
   }
@@ -202,28 +203,50 @@ function ensureHeaders_(sheet, headers) {
 }
 
 function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
-  const availability = parseAvailability_(String(row[headers.availabilityForService] || "").trim());
+  const timestamp = readFormCell_(row, headers.timestamp, 0);
+  const fullName = readFormCell_(row, headers.fullName, 1);
+  const age = readFormCell_(row, headers.age, 2);
+  const gender = readFormCell_(row, headers.gender, 3);
+  const mobileNumber = readFormCell_(row, headers.mobileNumber, 4);
+  const devoteeInTouch = readFormCell_(row, headers.devoteeInTouch, 5);
+  const areaOfStay = readFormCell_(row, headers.areaOfStay, 6);
+  const availabilityForService = readFormCell_(row, headers.availabilityForService, 7);
+  const photoUpload = readFormCell_(row, headers.photoUpload, 8);
+  const availability = parseAvailability_(availabilityForService);
+
+  if (!String(timestamp || fullName || mobileNumber || age || gender || devoteeInTouch || areaOfStay || availabilityForService || photoUpload).trim()) {
+    return null;
+  }
+
   const record = existingRow && existingRow.length ? existingRow.slice() : [];
   while (record.length < 17) record.push("");
 
   record[0] = existingRow && existingRow[0] ? existingRow[0] : sourceRow;
   record[1] = sourceRow;
-  record[2] = String(row[headers.timestamp] || "").trim();
-  record[3] = String(row[headers.fullName] || "").trim();
-  record[4] = String(row[headers.age] || "").trim();
-  record[5] = String(row[headers.gender] || "").trim();
-  record[6] = String(row[headers.mobileNumber] || "").trim();
-  record[7] = String(row[headers.devoteeInTouch] || "").trim();
-  record[8] = String(row[headers.areaOfStay] || "").trim();
-  record[9] = String(row[headers.availabilityForService] || "").trim();
+  record[2] = timestamp;
+  record[3] = fullName;
+  record[4] = age;
+  record[5] = gender;
+  record[6] = mobileNumber;
+  record[7] = devoteeInTouch;
+  record[8] = areaOfStay;
+  record[9] = availabilityForService;
   record[10] = availability[0] ? "Yes" : "";
   record[11] = availability[1] ? "Yes" : "";
   record[12] = availability[2] ? "Yes" : "";
   record[13] = availability[3] ? "Yes" : "";
-  record[14] = String(row[headers.photoUpload] || "").trim();
+  record[14] = photoUpload;
   record[15] = existingRow && existingRow[15] ? String(existingRow[15]).trim() : "";
   record[16] = existingRow && existingRow[16] ? String(existingRow[16]).trim() : "";
   return record;
+}
+
+function readFormCell_(row, headerIndex, fallbackIndex) {
+  let value = headerIndex >= 0 ? row[headerIndex] : "";
+  if (value === "" || value === null || value === undefined) {
+    value = fallbackIndex >= 0 ? row[fallbackIndex] : "";
+  }
+  return String(value || "").trim();
 }
 
 function upsertMasterRow_(sheet, record, existingRowNumber) {
