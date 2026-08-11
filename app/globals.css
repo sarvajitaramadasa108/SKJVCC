@@ -183,11 +183,13 @@ h2 {
 }
 
 .topnav a {
-  padding: 10px 14px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  backdrop-filter: blur(10px);
+  padding: 6px 0;
+  border-radius: 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.26);
+  backdrop-filter: none;
+  font-size: 14px;
 }
 
 .panel,
