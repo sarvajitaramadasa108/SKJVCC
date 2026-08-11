@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildExcelDownload, fetchPhotoDataUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
@@ -104,6 +104,7 @@ export default function ServiceWiseDashboard() {
   }
 
   async function openPhotoPreview(row) {
+    const directImageUrl = buildImageUrl(row.photoUpload, "preview");
     setViewer({
       open: true,
       loading: true,
@@ -112,16 +113,7 @@ export default function ServiceWiseDashboard() {
       error: ""
     });
 
-    try {
-      const src = await fetchPhotoDataUrl(row.photoUpload);
-      setViewer((current) => ({ ...current, loading: false, src }));
-    } catch (error) {
-      setViewer((current) => ({
-        ...current,
-        loading: false,
-        error: error.message || "Could not load photo"
-      }));
-    }
+    setViewer((current) => ({ ...current, loading: false, src: directImageUrl || "", error: directImageUrl ? "" : "No image available." }));
   }
 
   return (

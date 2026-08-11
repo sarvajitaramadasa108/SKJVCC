@@ -89,7 +89,7 @@ function listRegistrations() {
       return mapMasterRow_(row, headers, index + 2);
     })
     .filter(function (row) {
-      return isValidMasterRecord_(row) && !isFormHeaderRow_(rows[row.rowNumber - 1]);
+      return isValidMasterRecord_(row) && !isHeaderLikeRecord_(row);
     });
 }
 
@@ -425,6 +425,43 @@ function isValidMasterRecord_(row) {
   if (badLabels.has(fullName) || badLabels.has(mobileNumber)) return false;
   if (badLabels.has(devoteeInTouch) || badLabels.has(areaOfStay) || badLabels.has(availability)) return false;
   return true;
+}
+
+function isHeaderLikeRecord_(row) {
+  const labels = new Set([
+    "timestamp",
+    "full name",
+    "name",
+    "age",
+    "gender",
+    "mobile number",
+    "mobile number whatsapp number",
+    "devotee in touch",
+    "kindly mention name of devotee you are in touch",
+    "area of staying in vizag",
+    "availability for service",
+    "photo upload",
+    "photo",
+    "assigned service"
+  ]);
+
+  const values = [
+    row.fullName,
+    row.age,
+    row.gender,
+    row.mobileNumber,
+    row.devoteeInTouch,
+    row.areaOfStay,
+    row.availabilityForService,
+    row.photoUpload,
+    row.assignedService
+  ].map(function (cell) {
+    return normalizeHeader_(cell);
+  });
+
+  return values.some(function (value) {
+    return labels.has(value);
+  });
 }
 
 function pruneInvalidMasterRows_(sheet, rows, headers) {

@@ -75,6 +75,9 @@ h2 {
 .page-shell {
   display: flex;
   flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .hero,
@@ -202,7 +205,7 @@ h2 {
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  height: calc(100vh - 120px);
+  height: auto;
 }
 
 .panel-hero {
@@ -339,7 +342,7 @@ button:disabled {
   border: 1px solid rgba(112, 76, 36, 0.12);
   flex: 1;
   min-height: 0;
-  height: calc(100vh - 380px);
+  height: auto;
 }
 
 .data-table {
@@ -480,7 +483,7 @@ button:disabled {
   }
 
   .table-wrap {
-    height: calc(100vh - 320px);
+    height: calc(100vh - 300px);
   }
 
   .hero,
@@ -515,6 +518,6 @@ button:disabled {
   }
 
   .table-wrap {
-    height: calc(100vh - 300px);
+    height: calc(100vh - 280px);
   }
 }
