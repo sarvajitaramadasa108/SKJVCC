@@ -24,6 +24,10 @@ export default function HomePage() {
           <h2>Service Wise View</h2>
           <p>Select a service, inspect the assigned volunteers, and download the result as Excel.</p>
         </Link>
+        <Link className="card-link" href="/dashboard/assignment-status">
+          <h2>Status of Assignment</h2>
+          <p>Track required, allocated, and pending volunteers for every service.</p>
+        </Link>
       </section>
     </main>
   );

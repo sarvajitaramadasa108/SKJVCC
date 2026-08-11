@@ -4,6 +4,10 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 
+const REQUEST_TIMEOUT_MS = 20000;
+const SERVICES_CACHE_KEY = "skjvcc_services_cache";
+const SERVICE_ROWS_CACHE_PREFIX = "skjvcc_service_rows_cache_";
+
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
 }
@@ -21,14 +25,23 @@ export default function ServiceWiseDashboard() {
     let alive = true;
 
     async function loadServices() {
+      const cachedServices = readCachedServices();
+      if (cachedServices.length) {
+        setServices(cachedServices);
+        setLoading(false);
+      }
       try {
         const payload = await fetchBridge("services.list");
         if (!alive) return;
-        setServices(Array.isArray(payload) ? payload : []);
+        const nextServices = Array.isArray(payload) ? payload : [];
+        setServices(nextServices);
+        writeCachedServices(nextServices);
       } catch (error) {
         if (alive) {
-          setServices([]);
-          setMessage(error.message || "Could not load services");
+          if (!cachedServices.length) {
+            setServices([]);
+            setMessage(error.message || "Could not load services");
+          }
         }
       } finally {
         if (alive) setLoading(false);
@@ -48,17 +61,28 @@ export default function ServiceWiseDashboard() {
     }
 
     let alive = true;
+    const cachedRows = readCachedRows(selectedService);
+    if (cachedRows.length) {
+      setRows(cachedRows);
+      setLoading(false);
+    }
 
     async function loadRows() {
       try {
         setWorking(true);
         const payload = await fetchBridge("registrations.byService", { serviceName: selectedService });
         if (!alive) return;
-        setRows(Array.isArray(payload) ? payload : []);
+        const nextRows = Array.isArray(payload) ? payload : [];
+        setRows(nextRows);
+        writeCachedRows(selectedService, nextRows);
       } catch (error) {
         if (alive) {
-          setRows([]);
-          setMessage(error.message || "Could not load service volunteers");
+          if (!cachedRows.length) {
+            setRows([]);
+            setMessage(error.message || "Could not load service volunteers");
+          } else {
+            setMessage(`Showing cached volunteers for ${selectedService}. Refresh timed out.`);
+          }
         }
       } finally {
         if (alive) setWorking(false);
@@ -129,6 +153,8 @@ export default function ServiceWiseDashboard() {
         <nav className="topnav">
           <Link href="/">Home</Link>
           <Link href="/dashboard/registrations">Live Registrations</Link>
+          <Link href="/dashboard/assigned-volunteers">Assigned Volunteers</Link>
+          <Link href="/dashboard/assignment-status">Status of Assignment</Link>
         </nav>
       </header>
 
@@ -174,56 +200,59 @@ export default function ServiceWiseDashboard() {
 
         {!selectedService ? (
           <div className="empty-state">Choose a service to load the assigned volunteers.</div>
+        ) : rows.length ? (
+          <div className="stack">
+            {working ? <div className="inline-notice notice">Refreshing service volunteers...</div> : null}
+            <div className="table-wrap">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>S No</th>
+                    <th>Full Name</th>
+                    <th>Mobile Number</th>
+                    <th>Gender</th>
+                    <th>Age</th>
+                    <th>Area of Staying in Vizag</th>
+                    {AVAILABILITY_COLUMNS.map((column) => (
+                      <th key={column}>{column}</th>
+                    ))}
+                    <th>Photo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.map((row, index) => (
+                    <tr key={row.sourceRow || `${row.mobileNumber}-${index}`}>
+                      <td>{index + 1}</td>
+                      <td>{row.fullName || "-"}</td>
+                      <td>{row.mobileNumber || "-"}</td>
+                      <td>{row.gender || "-"}</td>
+                      <td>{row.age || "-"}</td>
+                      <td>{row.areaOfStay || "-"}</td>
+                      {AVAILABILITY_COLUMNS.map((column) => (
+                        <td key={`${row.sourceRow}-${column}`}>
+                          <span className={row.availabilityMap?.[column] ? "badge badge-yes" : "badge badge-no"}>
+                            {row.availabilityMap?.[column] ? "Available" : "Not available"}
+                          </span>
+                        </td>
+                      ))}
+                      <td>
+                        <button
+                          type="button"
+                          className="secondary tiny-button"
+                          onClick={() => openPhotoPreview(row)}
+                          disabled={!row.photoUpload}
+                        >
+                          View Image
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         ) : loading || working ? (
           <div className="empty-state">Loading service volunteers...</div>
-        ) : rows.length ? (
-          <div className="table-wrap">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>S No</th>
-                  <th>Full Name</th>
-                  <th>Mobile Number</th>
-                  <th>Gender</th>
-                  <th>Age</th>
-                  <th>Area of Staying in Vizag</th>
-                  {AVAILABILITY_COLUMNS.map((column) => (
-                    <th key={column}>{column}</th>
-                  ))}
-                  <th>Photo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row, index) => (
-                  <tr key={row.sourceRow || `${row.mobileNumber}-${index}`}>
-                    <td>{index + 1}</td>
-                    <td>{row.fullName || "-"}</td>
-                    <td>{row.mobileNumber || "-"}</td>
-                    <td>{row.gender || "-"}</td>
-                    <td>{row.age || "-"}</td>
-                    <td>{row.areaOfStay || "-"}</td>
-                    {AVAILABILITY_COLUMNS.map((column) => (
-                      <td key={`${row.sourceRow}-${column}`}>
-                        <span className={row.availabilityMap?.[column] ? "badge badge-yes" : "badge badge-no"}>
-                          {row.availabilityMap?.[column] ? "Available" : "Not available"}
-                        </span>
-                      </td>
-                    ))}
-                    <td>
-                      <button
-                        type="button"
-                        className="secondary tiny-button"
-                        onClick={() => openPhotoPreview(row)}
-                        disabled={!row.photoUpload}
-                      >
-                        View Image
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
         ) : (
           <div className="empty-state">No volunteers are assigned to this service yet.</div>
         )}
@@ -262,7 +291,7 @@ export default function ServiceWiseDashboard() {
 
 async function fetchBridge(action, payload = {}) {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response;
   try {
     response = await fetch("/api/bridge", {
@@ -285,4 +314,49 @@ async function fetchBridge(action, payload = {}) {
     throw new Error(data?.error || "Request failed");
   }
   return data.data;
+}
+
+function readCachedServices() {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(SERVICES_CACHE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedServices(services) {
+  try {
+    window.localStorage.setItem(SERVICES_CACHE_KEY, JSON.stringify(Array.isArray(services) ? services : []));
+  } catch {
+    // Ignore cache failures.
+  }
+}
+
+function serviceRowsCacheKey(serviceName) {
+  return `${SERVICE_ROWS_CACHE_PREFIX}${String(serviceName || "").trim().toLowerCase()}`;
+}
+
+function readCachedRows(serviceName) {
+  if (typeof window === "undefined" || !serviceName) return [];
+  try {
+    const raw = window.localStorage.getItem(serviceRowsCacheKey(serviceName));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeCachedRows(serviceName, rows) {
+  if (!serviceName) return;
+  try {
+    window.localStorage.setItem(serviceRowsCacheKey(serviceName), JSON.stringify(Array.isArray(rows) ? rows : []));
+  } catch {
+    // Ignore cache failures.
+  }
 }
