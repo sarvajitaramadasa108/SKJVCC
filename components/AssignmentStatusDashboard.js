@@ -22,10 +22,43 @@ export default function AssignmentStatusDashboard() {
       }
 
       try {
-        const response = await fetch("/api/bridge?action=services.list", { cache: "no-store" });
-        const payload = await readJsonResponse(response);
+        const [servicesResponse, registrationsResponse] = await Promise.all([
+          fetch("/api/bridge?action=services.list", { cache: "no-store" }),
+          fetch("/api/bridge?action=registrations.list", { cache: "no-store" })
+        ]);
+        const [servicesPayload, registrationsPayload] = await Promise.all([
+          readJsonResponse(servicesResponse),
+          readJsonResponse(registrationsResponse)
+        ]);
         if (!alive) return;
-        const nextServices = Array.isArray(payload.data) ? payload.data : [];
+        const serviceRows = Array.isArray(servicesPayload.data) ? servicesPayload.data : [];
+        const assignedCounts = buildAssignedCounts(Array.isArray(registrationsPayload.data) ? registrationsPayload.data : []);
+        const nextServices = serviceRows.map((service, index) => {
+          const serviceName = String(service.serviceName || "").trim();
+          const required = Number(service.requiredCount || 0);
+          const allocated = assignedCounts[serviceName] || 0;
+          return {
+            id: serviceName || `service-${index}`,
+            serialNo: index + 1,
+            serviceName: serviceName || "-",
+            required,
+            allocated,
+            pending: Math.max(required - allocated, 0)
+          };
+        });
+        const seenNames = new Set(nextServices.map((service) => service.serviceName));
+        for (const serviceName of Object.keys(assignedCounts)) {
+          if (seenNames.has(serviceName)) continue;
+          const allocated = assignedCounts[serviceName] || 0;
+          nextServices.push({
+            id: serviceName,
+            serialNo: nextServices.length + 1,
+            serviceName,
+            required: 0,
+            allocated,
+            pending: 0
+          });
+        }
         setServices(nextServices);
         writeCachedServices(nextServices);
         setMessage("");
@@ -46,20 +79,7 @@ export default function AssignmentStatusDashboard() {
   }, []);
 
   const rows = useMemo(
-    () =>
-      services.map((service, index) => {
-        const required = Number(service.requiredCount || 0);
-        const allocated = Number(service.allocatedCount || 0);
-        const pending = Math.max(required - allocated, 0);
-        return {
-          id: service.serviceName || `service-${index}`,
-          serialNo: index + 1,
-          serviceName: service.serviceName || "-",
-          required,
-          allocated,
-          pending
-        };
-      }),
+    () => services,
     [services]
   );
 
@@ -140,4 +160,13 @@ function writeCachedServices(services) {
   } catch {
     // Ignore cache failures.
   }
+}
+
+function buildAssignedCounts(registrations) {
+  return registrations.reduce((counts, row) => {
+    const serviceName = String(row?.assignedService || "").trim();
+    if (!serviceName) return counts;
+    counts[serviceName] = (counts[serviceName] || 0) + 1;
+    return counts;
+  }, {});
 }
