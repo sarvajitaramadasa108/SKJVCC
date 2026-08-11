@@ -65,7 +65,7 @@ export async function fetchPhotoDataUrl(photoUrl) {
   if (!response.ok || payload?.ok === false) {
     throw new Error(payload?.error || "Could not load photo");
   }
-  return payload?.data?.dataUrl || "";
+  return payload?.data?.dataUrl || payload?.data?.imageUrl || "";
 }
 
 export async function readJsonResponse(response) {

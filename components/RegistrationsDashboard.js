@@ -195,7 +195,7 @@ export default function RegistrationsDashboard() {
 
       {message ? <section className="notice">{message}</section> : null}
 
-      <section className="panel">
+      <section className="panel table-panel">
         <div className="panel-head">
           <div>
             <h2>Volunteer table</h2>

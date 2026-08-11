@@ -57,6 +57,7 @@ function syncFormResponsesToMaster() {
   for (let i = 1; i < values.length; i++) {
     const sourceRow = i + 1;
     const row = values[i];
+    if (isFormHeaderRow_(row)) continue;
     const record = mapFormResponseRow_(row, formHeaders, sourceRow, masterIndex[sourceRow]);
     if (!record) continue;
     upsertMasterRow_(master, record, masterIndex[sourceRow]);
@@ -220,7 +221,11 @@ function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
   const photoUpload = readFormCell_(row, headers.photoUpload, 8);
   const availability = parseAvailability_(availabilityForService);
 
-  if (isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) || !String(fullName || mobileNumber || age || gender || devoteeInTouch || areaOfStay || availabilityForService || photoUpload).trim()) {
+  if (
+    isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) ||
+    isFormHeaderRow_(row) ||
+    !String(fullName || mobileNumber || age || gender || devoteeInTouch || areaOfStay || availabilityForService || photoUpload).trim()
+  ) {
     return null;
   }
 
@@ -362,6 +367,32 @@ function isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) {
   );
 }
 
+function isFormHeaderRow_(row) {
+  const values = (row || []).map(function (cell) {
+    return normalizeHeader_(cell);
+  });
+  const labelSet = new Set([
+    "timestamp",
+    "full name",
+    "age",
+    "gender",
+    "mobile number whatsapp number",
+    "mobile number",
+    "devotee in touch kindly mention name of devotee you are in touch",
+    "area of staying in vizag",
+    "availability for service",
+    "photo upload kindly upload your any recent photo with good face visibility",
+    "photo upload"
+  ]);
+
+  if (!values.length) return false;
+  let matches = 0;
+  for (let i = 0; i < values.length; i++) {
+    if (labelSet.has(values[i])) matches += 1;
+  }
+  return values[0] === "timestamp" || matches >= 4;
+}
+
 function isValidMasterRecord_(row) {
   const fullName = normalizeHeader_(row.fullName || "");
   const mobileNumber = normalizeHeader_(row.mobileNumber || "");
@@ -394,7 +425,7 @@ function pruneInvalidMasterRows_(sheet, rows, headers) {
   const rowsToDelete = [];
   for (let i = 1; i < rows.length; i++) {
     const row = mapMasterRow_(rows[i], headers, i + 1);
-    if (!isValidMasterRecord_(row)) {
+    if (!isValidMasterRecord_(row) || isFormHeaderRow_(rows[i])) {
       rowsToDelete.push(i + 1);
     }
   }
@@ -411,12 +442,37 @@ function getRegistrationPhoto(payload) {
     throw new Error("No photo file found");
   }
 
-  const blob = DriveApp.getFileById(fileId).getBlob();
-  const mimeType = blob.getContentType() || "image/jpeg";
-  const base64 = Utilities.base64Encode(blob.getBytes());
+  const file = DriveApp.getFileById(fileId);
+  const candidates = [];
+
+  try {
+    const blob = file.getBlob();
+    if (blob) candidates.push(blob);
+  } catch (error) {
+    // ignore and fall back to thumbnail
+  }
+
+  try {
+    const thumbnail = file.getThumbnail();
+    if (thumbnail) candidates.push(thumbnail);
+  } catch (error) {
+    // ignore and fall back to URL
+  }
+
+  for (let i = 0; i < candidates.length; i++) {
+    const blob = candidates[i];
+    const mimeType = String(blob.getContentType() || "").trim();
+    if (mimeType && mimeType.indexOf("image/") === 0) {
+      return {
+        mimeType: mimeType,
+        dataUrl: "data:" + mimeType + ";base64," + Utilities.base64Encode(blob.getBytes())
+      };
+    }
+  }
+
   return {
-    mimeType: mimeType,
-    dataUrl: "data:" + mimeType + ";base64," + base64
+    mimeType: "image/jpeg",
+    imageUrl: "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1200"
   };
 }
 
