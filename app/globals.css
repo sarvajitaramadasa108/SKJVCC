@@ -338,8 +338,7 @@ button:disabled {
 }
 
 .table-wrap {
-  overflow-x: auto;
-  overflow-y: visible;
+  overflow: visible;
   border-radius: 18px;
   border: 1px solid rgba(112, 76, 36, 0.12);
   min-height: 0;
@@ -349,17 +348,21 @@ button:disabled {
 
 .data-table {
   width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
-  min-width: 1280px;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.86);
 }
 
 .data-table th,
 .data-table td {
-  padding: 11px 12px;
+  padding: 8px 8px;
   border-bottom: 1px solid rgba(112, 76, 36, 0.1);
   text-align: left;
   vertical-align: top;
+  font-size: 11px;
+  line-height: 1.25;
+  word-break: break-word;
 }
 
 .data-table th {
@@ -367,10 +370,67 @@ button:disabled {
   top: 0;
   background: #f7f0e5;
   color: #7c2d12;
-  font-size: 12px;
+  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  z-index: 1;
+  letter-spacing: 0.02em;
+  z-index: 4;
+  box-shadow: 0 1px 0 rgba(112, 76, 36, 0.08), 0 8px 16px rgba(255, 250, 243, 0.84);
+}
+
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) {
+  width: 48px;
+}
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) {
+  width: 120px;
+}
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) {
+  width: 54px;
+}
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) {
+  width: 64px;
+}
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) {
+  width: 96px;
+}
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) {
+  width: 108px;
+}
+
+.data-table th:nth-child(7),
+.data-table td:nth-child(7) {
+  width: 116px;
+}
+
+.data-table th:nth-child(8),
+.data-table td:nth-child(8),
+.data-table th:nth-child(9),
+.data-table td:nth-child(9),
+.data-table th:nth-child(10),
+.data-table td:nth-child(10),
+.data-table th:nth-child(11),
+.data-table td:nth-child(11) {
+  width: 92px;
+}
+
+.data-table th:nth-child(12),
+.data-table td:nth-child(12) {
+  width: 74px;
+}
+
+.data-table th:nth-child(13),
+.data-table td:nth-child(13) {
+  width: 112px;
 }
 
 .data-table tbody tr:nth-child(even) td {
@@ -380,10 +440,10 @@ button:disabled {
 .badge {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 4px 10px;
+  min-height: 22px;
+  padding: 3px 8px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
 }
 
@@ -399,12 +459,25 @@ button:disabled {
 
 .service-cell {
   display: grid;
-  gap: 8px;
-  min-width: 180px;
+  gap: 6px;
+  min-width: 0;
 }
 
 .service-cell strong {
   display: block;
+  font-size: 11px;
+}
+
+.service-cell select {
+  min-height: 30px;
+  padding: 4px 6px;
+  font-size: 10px;
+}
+
+.service-cell .tiny-button {
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 10px;
 }
 
 .image-modal {
