@@ -23,35 +23,41 @@ export default function RegistrationsDashboard() {
     let alive = true;
     let timer = null;
 
-    async function loadData() {
+    async function loadRegistrations() {
       try {
-        const [registrationsPayload, servicesPayload] = await Promise.all([
-          fetchBridge("registrations.list"),
-          fetchBridge("services.list")
-        ]);
-
+        const registrationsPayload = await fetchBridge("registrations.list");
         if (!alive) return;
-
         setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
-        setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
       } catch (error) {
         if (alive) {
           setMessage(error.message || "Could not load registrations");
           setRegistrations([]);
-          setServices([]);
         }
       } finally {
         if (alive) {
           setLoading(false);
-          setRefreshing(false);
         }
       }
     }
 
-    loadData();
+    async function loadServices() {
+      try {
+        const servicesPayload = await fetchBridge("services.list");
+        if (!alive) return;
+        setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+      } catch {
+        if (alive) setServices([]);
+      }
+    }
+
+    loadRegistrations();
+    loadServices();
     timer = window.setInterval(() => {
       setRefreshing(true);
-      loadData();
+      loadRegistrations().finally(() => {
+        if (alive) setRefreshing(false);
+      });
+      loadServices();
     }, 15000);
 
     return () => {
@@ -337,12 +343,13 @@ export default function RegistrationsDashboard() {
     setRefreshing(true);
     setMessage("");
     try {
-      const [registrationsPayload, servicesPayload] = await Promise.all([
-        fetchBridge("registrations.list"),
-        fetchBridge("services.list")
-      ]);
+      const registrationsPayload = await fetchBridge("registrations.list");
       setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
-      setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+      fetchBridge("services.list")
+        .then((servicesPayload) => {
+          setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+        })
+        .catch(() => setServices([]));
       setMessage("Data refreshed");
     } catch (error) {
       setMessage(error.message || "Could not refresh data");

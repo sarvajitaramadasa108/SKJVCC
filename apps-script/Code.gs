@@ -363,12 +363,31 @@ function isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) {
 }
 
 function isValidMasterRecord_(row) {
-  return Boolean(
-    String(row.fullName || "").trim() &&
-    String(row.mobileNumber || "").trim() &&
-    String(row.fullName || "").trim().toLowerCase() !== "full name" &&
-    String(row.mobileNumber || "").trim().toLowerCase() !== "mobile number"
-  );
+  const fullName = normalizeHeader_(row.fullName || "");
+  const mobileNumber = normalizeHeader_(row.mobileNumber || "");
+  const devoteeInTouch = normalizeHeader_(row.devoteeInTouch || "");
+  const areaOfStay = normalizeHeader_(row.areaOfStay || "");
+  const availability = normalizeHeader_(row.availabilityForService || "");
+  const badLabels = new Set([
+    "timestamp",
+    "full name",
+    "name",
+    "age",
+    "gender",
+    "mobile number",
+    "mobile number whatsapp number",
+    "devotee in touch",
+    "kindly mention name of devotee you are in touch",
+    "area of staying in vizag",
+    "availability for service",
+    "photo upload",
+    "photo"
+  ]);
+
+  if (!fullName || !mobileNumber) return false;
+  if (badLabels.has(fullName) || badLabels.has(mobileNumber)) return false;
+  if (badLabels.has(devoteeInTouch) || badLabels.has(areaOfStay) || badLabels.has(availability)) return false;
+  return true;
 }
 
 function pruneInvalidMasterRows_(sheet, rows, headers) {
