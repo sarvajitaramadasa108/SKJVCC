@@ -213,7 +213,7 @@ h2 {
 
 .assignment-status-panel {
   flex: 1 1 auto;
-  min-height: calc(100vh - 190px);
+  min-height: calc(100vh - 140px);
   overflow: hidden;
 }
 
@@ -378,7 +378,7 @@ button:disabled {
   overflow: auto;
   max-height: none;
   flex: 1 1 auto;
-  height: calc(100vh - 320px);
+  height: calc(100vh - 220px);
 }
 
 .assignment-table {
