@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 
+const REQUEST_TIMEOUT_MS = 30000;
+
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
 }
@@ -35,7 +37,9 @@ export default function RegistrationsDashboard() {
         cacheJson("skjvcc_registrations_cache", next);
       } catch (error) {
         if (alive) {
-          setMessage(error.message || "Could not load registrations");
+          if (!String(error?.message || "").toLowerCase().includes("timed out") || !registrations.length) {
+            setMessage(error.message || "Could not load registrations");
+          }
         }
       } finally {
         if (alive) setRefreshing(false);
@@ -336,11 +340,13 @@ export default function RegistrationsDashboard() {
       fetchBridge("services.list")
         .then((servicesPayload) => {
           setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
-        })
+      })
         .catch(() => setServices([]));
       setMessage("Data refreshed");
     } catch (error) {
-      setMessage(error.message || "Could not refresh data");
+      if (!String(error?.message || "").toLowerCase().includes("timed out") || !registrations.length) {
+        setMessage(error.message || "Could not refresh data");
+      }
     } finally {
       setRefreshing(false);
     }
@@ -349,7 +355,7 @@ export default function RegistrationsDashboard() {
 
 async function fetchBridge(action, payload = {}) {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let response;
   try {
     response = await fetch("/api/bridge", {
@@ -361,7 +367,7 @@ async function fetchBridge(action, payload = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Request timed out. Please try Refresh now.");
+      throw new Error("Request timed out. Showing cached data when available.");
     }
     throw error;
   } finally {
