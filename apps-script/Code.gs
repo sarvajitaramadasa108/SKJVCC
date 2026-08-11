@@ -130,18 +130,19 @@ function listServices() {
   const sheet = serviceSheet(ss);
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
-
-  const headers = buildHeaderMap(values[0]);
   const seen = {};
 
   return values.slice(1).map(function (row, index) {
-    const serviceName = String(row[1] || row[headers.serviceName] || "").trim();
-    const coordinatorName = String(row[headers.coordinatorName] || row[2] || "").trim();
-    const contactNumber = String(row[headers.contactNumber] || row[3] || "").trim();
-    const reportingTime = String(row[headers.reportingTime] || row[4] || "").trim();
-    const requiredCount = Number(row[headers.requiredCount] || row[6] || row[5] || 0);
-    const photoUrl = String(row[headers.photoUrl] || row[5] || row[6] || "").trim();
-    const active = headers.active >= 0 ? String(row[headers.active] || "").trim().toLowerCase() !== "false" : true;
+    // Service Master layout:
+    // A S No, B Service Name, C Service Coordinator, D Contact Number,
+    // E Reporting Time, F Photo, G No. of Required Volunteers, H Active.
+    const serviceName = String(row[1] || "").trim();
+    const coordinatorName = String(row[2] || "").trim();
+    const contactNumber = String(row[3] || "").trim();
+    const reportingTime = String(row[4] || "").trim();
+    const photoUrl = String(row[5] || "").trim();
+    const requiredCount = Number(row[6] || 0);
+    const active = values[0].length > 7 ? String(row[7] || "").trim().toLowerCase() !== "false" : true;
 
     return {
       rowNumber: index + 2,
