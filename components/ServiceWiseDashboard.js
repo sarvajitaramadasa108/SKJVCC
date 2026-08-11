@@ -2,7 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildExcelDownload, fetchPhotoDataUrl, readJsonResponse } from "@/components/registryUtils";
+
+function emptyImage() {
+  return { open: false, loading: false, src: "", title: "", error: "" };
+}
 
 export default function ServiceWiseDashboard() {
   const [services, setServices] = useState([]);
@@ -11,6 +15,7 @@ export default function ServiceWiseDashboard() {
   const [loading, setLoading] = useState(true);
   const [working, setWorking] = useState(false);
   const [message, setMessage] = useState("");
+  const [viewer, setViewer] = useState(emptyImage());
 
   useEffect(() => {
     let alive = true;
@@ -78,7 +83,6 @@ export default function ServiceWiseDashboard() {
   function downloadExcel() {
     const headers = [
       "S No",
-      "Timestamp",
       "Full Name",
       "Age",
       "Gender",
@@ -90,7 +94,6 @@ export default function ServiceWiseDashboard() {
     ];
     const excelRows = rows.map((row, index) => [
       index + 1,
-      row.timestamp || "",
       row.fullName || "",
       row.age || "",
       row.gender || "",
@@ -101,6 +104,27 @@ export default function ServiceWiseDashboard() {
       row.assignedService || ""
     ]);
     buildExcelDownload(`${selectedService || "service"}-volunteers.xls`, headers, excelRows);
+  }
+
+  async function openPhotoPreview(row) {
+    setViewer({
+      open: true,
+      loading: true,
+      src: "",
+      title: row.fullName || row.mobileNumber || "Volunteer photo",
+      error: ""
+    });
+
+    try {
+      const src = await fetchPhotoDataUrl(row.photoUpload);
+      setViewer((current) => ({ ...current, loading: false, src }));
+    } catch (error) {
+      setViewer((current) => ({
+        ...current,
+        loading: false,
+        error: error.message || "Could not load photo"
+      }));
+    }
   }
 
   return (
@@ -200,7 +224,7 @@ export default function ServiceWiseDashboard() {
                       <button
                         type="button"
                         className="secondary tiny-button"
-                        onClick={() => window.open(buildImageUrl(row.photoUpload, "full"), "_blank", "noopener,noreferrer")}
+                        onClick={() => openPhotoPreview(row)}
                         disabled={!row.photoUpload}
                       >
                         View Image
@@ -215,6 +239,34 @@ export default function ServiceWiseDashboard() {
           <div className="empty-state">No volunteers are assigned to this service yet.</div>
         )}
       </section>
+
+      {viewer.open ? (
+        <div
+          className="image-modal"
+          role="button"
+          tabIndex={0}
+          onClick={() => setViewer(emptyImage())}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") setViewer(emptyImage());
+          }}
+        >
+          <div className="image-modal-card" onClick={(event) => event.stopPropagation()}>
+            <div className="image-modal-head">
+              <strong>{viewer.title}</strong>
+              <button type="button" className="secondary tiny-button" onClick={() => setViewer(emptyImage())}>
+                Close
+              </button>
+            </div>
+            {viewer.loading ? (
+              <div className="empty-state">Loading image...</div>
+            ) : viewer.src ? (
+              <img className="image-modal-img" src={viewer.src} alt={viewer.title} />
+            ) : (
+              <div className="empty-state">{viewer.error || "No image available."}</div>
+            )}
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

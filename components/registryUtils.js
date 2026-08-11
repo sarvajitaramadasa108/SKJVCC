@@ -10,7 +10,7 @@ export function normalizeText(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ")
-    .replace(/[–—]/g, "-");
+    .replace(/[-–—]/g, "-");
 }
 
 export function availabilityFlags(value) {
@@ -52,6 +52,20 @@ export function buildImageUrl(link, mode = "preview") {
   }
 
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=w900`;
+}
+
+export async function fetchPhotoDataUrl(photoUrl) {
+  const response = await fetch("/api/bridge", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "registrations.photo", photoUrl }),
+    cache: "no-store"
+  });
+  const payload = await readJsonResponse(response);
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(payload?.error || "Could not load photo");
+  }
+  return payload?.data?.dataUrl || "";
 }
 
 export async function readJsonResponse(response) {

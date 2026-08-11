@@ -26,6 +26,7 @@ function route(action, payload) {
   if (action === "registrations.list") return { ok: true, data: listRegistrations() };
   if (action === "registrations.byService") return { ok: true, data: registrationsByService(payload.serviceName) };
   if (action === "registrations.assignService") return { ok: true, data: assignService(payload) };
+  if (action === "registrations.photo") return { ok: true, data: getRegistrationPhoto(payload) };
   return { ok: false, error: "Unknown action: " + action };
 }
 
@@ -73,9 +74,16 @@ function listRegistrations() {
   if (rows.length < 2) return [];
 
   const headers = buildHeaderMap(rows[0]);
-  return rows.slice(1).map(function (row, index) {
-    return mapMasterRow_(row, headers, index + 2);
-  });
+  const records = rows
+    .slice(1)
+    .map(function (row, index) {
+      return mapMasterRow_(row, headers, index + 2);
+    })
+    .filter(function (row) {
+      return isValidMasterRecord_(row);
+    });
+  pruneInvalidMasterRows_(sheet, rows, headers);
+  return records;
 }
 
 function registrationsByService(serviceName) {
@@ -151,7 +159,6 @@ function ensureMasterHeader(sheet) {
   const headers = [
     "S No",
     "Source Row",
-    "Timestamp",
     "Full Name",
     "Age",
     "Gender",
@@ -203,7 +210,6 @@ function ensureHeaders_(sheet, headers) {
 }
 
 function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
-  const timestamp = readFormCell_(row, headers.timestamp, 0);
   const fullName = readFormCell_(row, headers.fullName, 1);
   const age = readFormCell_(row, headers.age, 2);
   const gender = readFormCell_(row, headers.gender, 3);
@@ -214,30 +220,29 @@ function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
   const photoUpload = readFormCell_(row, headers.photoUpload, 8);
   const availability = parseAvailability_(availabilityForService);
 
-  if (!String(timestamp || fullName || mobileNumber || age || gender || devoteeInTouch || areaOfStay || availabilityForService || photoUpload).trim()) {
+  if (isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) || !String(fullName || mobileNumber || age || gender || devoteeInTouch || areaOfStay || availabilityForService || photoUpload).trim()) {
     return null;
   }
 
   const record = existingRow && existingRow.length ? existingRow.slice() : [];
-  while (record.length < 17) record.push("");
+  while (record.length < 16) record.push("");
 
   record[0] = existingRow && existingRow[0] ? existingRow[0] : sourceRow;
   record[1] = sourceRow;
-  record[2] = timestamp;
-  record[3] = fullName;
-  record[4] = age;
-  record[5] = gender;
-  record[6] = mobileNumber;
-  record[7] = devoteeInTouch;
-  record[8] = areaOfStay;
-  record[9] = availabilityForService;
-  record[10] = availability[0] ? "Yes" : "";
-  record[11] = availability[1] ? "Yes" : "";
-  record[12] = availability[2] ? "Yes" : "";
-  record[13] = availability[3] ? "Yes" : "";
-  record[14] = photoUpload;
+  record[2] = fullName;
+  record[3] = age;
+  record[4] = gender;
+  record[5] = mobileNumber;
+  record[6] = devoteeInTouch;
+  record[7] = areaOfStay;
+  record[8] = availabilityForService;
+  record[9] = availability[0] ? "Yes" : "";
+  record[10] = availability[1] ? "Yes" : "";
+  record[11] = availability[2] ? "Yes" : "";
+  record[12] = availability[3] ? "Yes" : "";
+  record[13] = photoUpload;
+  record[14] = existingRow && existingRow[14] ? String(existingRow[14]).trim() : "";
   record[15] = existingRow && existingRow[15] ? String(existingRow[15]).trim() : "";
-  record[16] = existingRow && existingRow[16] ? String(existingRow[16]).trim() : "";
   return record;
 }
 
@@ -259,7 +264,7 @@ function upsertMasterRow_(sheet, record, existingRowNumber) {
 
 function mapMasterRow_(row, headers, rowNumber) {
   const availabilityFlags = AVAILABILITY_COLUMNS.map(function (_, index) {
-    return String(row[10 + index] || "").trim().toLowerCase() === "yes";
+    return String(row[9 + index] || "").trim().toLowerCase() === "yes";
   });
   const availabilityMap = {};
   for (let i = 0; i < AVAILABILITY_COLUMNS.length; i++) {
@@ -270,7 +275,6 @@ function mapMasterRow_(row, headers, rowNumber) {
     rowNumber: rowNumber,
     sourceRow: Number(row[headers.sourceRow] || rowNumber),
     serialNo: Number(row[headers.serialNo] || rowNumber - 1),
-    timestamp: String(row[headers.timestamp] || "").trim(),
     fullName: String(row[headers.fullName] || "").trim(),
     age: String(row[headers.age] || "").trim(),
     gender: String(row[headers.gender] || "").trim(),
@@ -300,7 +304,6 @@ function buildHeaderMap(headerRow) {
   return {
     serialNo: findHeaderIndex_(normalized, ["s no", "serial no", "serial number"]),
     sourceRow: findHeaderIndex_(normalized, ["source row", "row", "form row"]),
-    timestamp: findHeaderIndex_(normalized, ["timestamp", "time stamp"]),
     fullName: findHeaderIndex_(normalized, ["full name", "name"]),
     age: findHeaderIndex_(normalized, ["age"]),
     gender: findHeaderIndex_(normalized, ["gender"]),
@@ -344,6 +347,74 @@ function parseAvailability_(text) {
   return AVAILABILITY_COLUMNS.map(function (label) {
     return normalized.indexOf(normalizeHeader_(label)) !== -1;
   });
+}
+
+function isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) {
+  const full = normalizeHeader_(fullName);
+  const mobile = normalizeHeader_(mobileNumber);
+  const availability = normalizeHeader_(availabilityForService);
+  return (
+    full === "full name" ||
+    full === "name" ||
+    mobile === "mobile number" ||
+    mobile === "phone number" ||
+    availability === "availability for service"
+  );
+}
+
+function isValidMasterRecord_(row) {
+  return Boolean(
+    String(row.fullName || "").trim() &&
+    String(row.mobileNumber || "").trim() &&
+    String(row.fullName || "").trim().toLowerCase() !== "full name" &&
+    String(row.mobileNumber || "").trim().toLowerCase() !== "mobile number"
+  );
+}
+
+function pruneInvalidMasterRows_(sheet, rows, headers) {
+  const rowsToDelete = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = mapMasterRow_(rows[i], headers, i + 1);
+    if (!isValidMasterRecord_(row)) {
+      rowsToDelete.push(i + 1);
+    }
+  }
+
+  for (let i = rowsToDelete.length - 1; i >= 0; i--) {
+    sheet.deleteRow(rowsToDelete[i]);
+  }
+}
+
+function getRegistrationPhoto(payload) {
+  const photoUrl = String(payload.photoUrl || payload.photoUpload || "").trim();
+  const fileId = extractDriveFileId_(photoUrl);
+  if (!fileId) {
+    throw new Error("No photo file found");
+  }
+
+  const blob = DriveApp.getFileById(fileId).getBlob();
+  const mimeType = blob.getContentType() || "image/jpeg";
+  const base64 = Utilities.base64Encode(blob.getBytes());
+  return {
+    mimeType: mimeType,
+    dataUrl: "data:" + mimeType + ";base64," + base64
+  };
+}
+
+function extractDriveFileId_(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  const patterns = [
+    /\/d\/([a-zA-Z0-9_-]+)/,
+    /[?&]id=([a-zA-Z0-9_-]+)/,
+    /\/file\/d\/([a-zA-Z0-9_-]+)/,
+    /\/uc\?id=([a-zA-Z0-9_-]+)/
+  ];
+  for (let i = 0; i < patterns.length; i++) {
+    const match = text.match(patterns[i]);
+    if (match && match[1]) return match[1];
+  }
+  return "";
 }
 
 function buildSourceRowIndex_(rows) {

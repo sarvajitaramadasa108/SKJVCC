@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, fetchPhotoDataUrl, readJsonResponse } from "@/components/registryUtils";
 
 function emptyImage() {
-  return { open: false, src: "", title: "" };
+  return { open: false, loading: false, src: "", title: "", error: "" };
 }
 
 export default function RegistrationsDashboard() {
@@ -118,6 +118,27 @@ export default function RegistrationsDashboard() {
     }
   }
 
+  async function openPhotoPreview(row) {
+    setViewer({
+      open: true,
+      loading: true,
+      src: "",
+      title: row.fullName || row.mobileNumber || "Volunteer photo",
+      error: ""
+    });
+
+    try {
+      const src = await fetchPhotoDataUrl(row.photoUpload);
+      setViewer((current) => ({ ...current, loading: false, src }));
+    } catch (error) {
+      setViewer((current) => ({
+        ...current,
+        loading: false,
+        error: error.message || "Could not load photo"
+      }));
+    }
+  }
+
   return (
     <main className="page-shell">
       <header className="topbar">
@@ -184,7 +205,6 @@ export default function RegistrationsDashboard() {
               <thead>
                 <tr>
                   <th>S No</th>
-                  <th>Timestamp</th>
                   <th>Full Name</th>
                   <th>Age</th>
                   <th>Gender</th>
@@ -205,7 +225,6 @@ export default function RegistrationsDashboard() {
                   return (
                     <tr key={row.sourceRow}>
                       <td>{row.serialNo || row.sourceRow || "-"}</td>
-                      <td>{row.timestamp || "-"}</td>
                       <td>{row.fullName || "-"}</td>
                       <td>{row.age || "-"}</td>
                       <td>{row.gender || "-"}</td>
@@ -231,11 +250,7 @@ export default function RegistrationsDashboard() {
                         <button
                           type="button"
                           className="secondary tiny-button"
-                          onClick={() => setViewer({
-                            open: true,
-                            src: buildImageUrl(row.photoUpload, "full"),
-                            title: row.fullName || row.mobileNumber || "Volunteer photo"
-                          })}
+                          onClick={() => openPhotoPreview(row)}
                           disabled={!row.photoUpload}
                         >
                           View Image
@@ -269,11 +284,7 @@ export default function RegistrationsDashboard() {
                                 ))}
                               </select>
                               {row.assignedService ? (
-                                <button
-                                  type="button"
-                                  className="link-button"
-                                  onClick={() => setEditingRow(null)}
-                                >
+                                <button type="button" className="link-button" onClick={() => setEditingRow(null)}>
                                   Cancel
                                 </button>
                               ) : null}
@@ -309,10 +320,12 @@ export default function RegistrationsDashboard() {
                 Close
               </button>
             </div>
-            {viewer.src ? (
+            {viewer.loading ? (
+              <div className="empty-state">Loading image...</div>
+            ) : viewer.src ? (
               <img className="image-modal-img" src={viewer.src} alt={viewer.title} />
             ) : (
-              <div className="empty-state">No image available.</div>
+              <div className="empty-state">{viewer.error || "No image available."}</div>
             )}
           </div>
         </div>
