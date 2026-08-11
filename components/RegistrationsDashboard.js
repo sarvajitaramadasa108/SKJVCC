@@ -343,12 +343,25 @@ export default function RegistrationsDashboard() {
 }
 
 async function fetchBridge(action, payload = {}) {
-  const response = await fetch("/api/bridge", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action, ...payload }),
-    cache: "no-store"
-  });
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 8000);
+  let response;
+  try {
+    response = await fetch("/api/bridge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, ...payload }),
+      cache: "no-store",
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error.name === "AbortError") {
+      throw new Error("Request timed out. Please try Refresh now.");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
   const data = await readJsonResponse(response);
   if (!response.ok || data?.ok === false) {
     throw new Error(data?.error || "Request failed");
