@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
@@ -9,6 +10,122 @@ const REQUEST_TIMEOUT_MS = 30000;
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
+}
+
+function ServiceDropdown({ value, options, placeholder, onChange, disabled = false }) {
+  const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState({ top: 0, left: 0 });
+  const triggerRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open || typeof window === "undefined") return;
+
+    function updatePosition() {
+      const trigger = triggerRef.current;
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+      const menuWidth = 320;
+      const estimatedHeight = Math.min(options.length + 1, 8) * 44 + 20;
+      const left = Math.max(12, Math.min(rect.right - menuWidth, viewportWidth - menuWidth - 12));
+      const shouldOpenAbove = rect.bottom + estimatedHeight > viewportHeight - 12 && rect.top > estimatedHeight;
+      const top = shouldOpenAbove ? Math.max(12, rect.top - estimatedHeight - 8) : Math.min(viewportHeight - 12, rect.bottom + 8);
+      setMenuStyle({ top, left });
+    }
+
+    function handlePointerDown(event) {
+      if (triggerRef.current?.contains(event.target) || menuRef.current?.contains(event.target)) return;
+      setOpen(false);
+    }
+
+    function handleEscape(event) {
+      if (event.key === "Escape") setOpen(false);
+    }
+
+    updatePosition();
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, options.length]);
+
+  return (
+    <div className="service-dropdown-wrap">
+      <button
+        type="button"
+        ref={triggerRef}
+        className="service-dropdown-trigger"
+        onClick={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (disabled) return;
+          setOpen((current) => !current);
+        }}
+        disabled={disabled}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={value ? "service-dropdown-value" : "service-dropdown-placeholder"}>{value || placeholder}</span>
+        <span className="service-dropdown-caret" aria-hidden="true">▾</span>
+      </button>
+      {open && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              ref={menuRef}
+              className="service-dropdown-menu"
+              style={{ top: `${menuStyle.top}px`, left: `${menuStyle.left}px`, width: "320px" }}
+              role="listbox"
+            >
+              <div className="service-dropdown-menu-head">
+                <strong>{placeholder}</strong>
+                <span>{options.length} services</span>
+              </div>
+              <div className="service-dropdown-options">
+                <button
+                  type="button"
+                  className={`service-dropdown-option ${!value ? "is-selected" : ""}`}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    onChange("");
+                    setOpen(false);
+                  }}
+                >
+                  {placeholder}
+                </button>
+                {options.map((serviceName) => (
+                  <button
+                    type="button"
+                    key={serviceName}
+                    className={`service-dropdown-option ${serviceName === value ? "is-selected" : ""}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      onChange(serviceName);
+                      setOpen(false);
+                    }}
+                  >
+                    {serviceName}
+                  </button>
+                ))}
+              </div>
+              {options.length > 8 ? <div className="service-dropdown-scroll-indicator" aria-hidden="true" /> : null}
+            </div>,
+            document.body
+          )
+        : null}
+    </div>
+  );
 }
 
 export default function RegistrationsDashboard() {
@@ -264,18 +381,13 @@ export default function RegistrationsDashboard() {
                             </div>
                           ) : (
                             <>
-                              <select
+                              <ServiceDropdown
                                 value={row.assignedService || ""}
-                                onChange={(event) => handleAssignService(row, event.target.value)}
+                                options={serviceOptions}
+                                placeholder={serviceOptions.length ? "Assign service" : "No services yet"}
+                                onChange={(nextService) => handleAssignService(row, nextService)}
                                 disabled={savingRow === row.sourceRow || !serviceOptions.length}
-                              >
-                                <option value="">{serviceOptions.length ? "Assign service" : "No services yet"}</option>
-                                {serviceOptions.map((serviceName) => (
-                                  <option key={serviceName} value={serviceName}>
-                                    {serviceName}
-                                  </option>
-                                ))}
-                              </select>
+                              />
                               {row.assignedService ? (
                                 <button type="button" className="link-button" onClick={() => setEditingRow(null)}>
                                   Cancel
