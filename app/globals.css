@@ -355,6 +355,54 @@ button:disabled {
   background: rgba(255, 255, 255, 0.86);
 }
 
+.assignment-table-wrap {
+  overflow: auto;
+  max-height: min(72vh, calc(100vh - 320px));
+}
+
+.assignment-table {
+  table-layout: fixed;
+}
+
+.assignment-table th,
+.assignment-table td {
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.assignment-table th:nth-child(1),
+.assignment-table td:nth-child(1) {
+  width: 88px;
+}
+
+.assignment-table th:nth-child(2),
+.assignment-table td:nth-child(2) {
+  width: 42%;
+}
+
+.assignment-table th:nth-child(3),
+.assignment-table td:nth-child(3),
+.assignment-table th:nth-child(4),
+.assignment-table td:nth-child(4),
+.assignment-table th:nth-child(5),
+.assignment-table td:nth-child(5) {
+  width: 19.33%;
+  text-align: center;
+}
+
+.assignment-table td:nth-child(3),
+.assignment-table td:nth-child(4),
+.assignment-table td:nth-child(5) {
+  font-weight: 700;
+}
+
+.assignment-table td:nth-child(2) strong,
+.assignment-table td:nth-child(5) strong {
+  display: block;
+  white-space: normal;
+}
+
 .data-table th,
 .data-table td {
   padding: 8px 8px;
