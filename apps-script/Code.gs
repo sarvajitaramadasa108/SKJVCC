@@ -132,19 +132,32 @@ function listServices() {
   if (values.length < 2) return [];
 
   const headers = buildHeaderMap(values[0]);
+  const seen = {};
+
   return values.slice(1).map(function (row, index) {
+    const serviceName = String(row[1] || row[headers.serviceName] || "").trim();
+    const coordinatorName = String(row[headers.coordinatorName] || row[2] || "").trim();
+    const contactNumber = String(row[headers.contactNumber] || row[3] || "").trim();
+    const reportingTime = String(row[headers.reportingTime] || row[4] || "").trim();
+    const requiredCount = Number(row[headers.requiredCount] || row[5] || 0);
+    const photoUrl = String(row[headers.photoUrl] || row[6] || "").trim();
+    const active = headers.active >= 0 ? String(row[headers.active] || "").trim().toLowerCase() !== "false" : true;
+
     return {
       rowNumber: index + 2,
-      serviceName: String(row[headers.serviceName] || "").trim(),
-      coordinatorName: String(row[headers.coordinatorName] || "").trim(),
-      contactNumber: String(row[headers.contactNumber] || "").trim(),
-      reportingTime: String(row[headers.reportingTime] || "").trim(),
-      requiredCount: Number(row[headers.requiredCount] || 0),
-      photoUrl: String(row[headers.photoUrl] || "").trim(),
-      active: headers.active >= 0 ? String(row[headers.active] || "").trim().toLowerCase() !== "false" : true
+      serviceName: serviceName,
+      coordinatorName: coordinatorName,
+      contactNumber: contactNumber,
+      reportingTime: reportingTime,
+      requiredCount: requiredCount,
+      photoUrl: photoUrl,
+      active: active
     };
   }).filter(function (row) {
-    return row.serviceName;
+    if (!row.serviceName) return false;
+    if (seen[row.serviceName]) return false;
+    seen[row.serviceName] = true;
+    return true;
   });
 }
 
