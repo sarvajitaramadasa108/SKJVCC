@@ -1,14 +1,24 @@
 import Link from "next/link";
+import PortalNav from "@/components/PortalNav";
 
 export default function HomePage() {
   return (
     <main className="home-shell">
+      <header className="topbar home-topbar">
+        <div>
+          <p className="eyebrow">SKJVCC Volunteer Portal</p>
+          <h1>Volunteer Registration Control Room</h1>
+          <p className="hero-copy">
+            Watch registrations update in real time, preview uploaded photos, assign services inline, and export service-wise volunteer lists when you need them.
+          </p>
+        </div>
+        <PortalNav />
+      </header>
+
       <section className="hero hero-home">
-        <p className="eyebrow">Volunteer Registration Control Room</p>
-        <h1>Live Google Sheet dashboard for volunteer registrations</h1>
-        <p className="hero-copy">
-          Watch registrations update in real time, preview uploaded photos, assign services inline, and export service-wise volunteer lists when you need them.
-        </p>
+        <p className="eyebrow">Live sheet sync</p>
+        <h2>Live Google Sheet dashboard for volunteer registrations</h2>
+        <p className="hero-copy">Everything below is wired to the same live sheet and assignment flow.</p>
       </section>
 
       <section className="card-grid">

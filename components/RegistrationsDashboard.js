@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 30000;
 
@@ -152,10 +153,7 @@ export default function RegistrationsDashboard() {
             Google Form responses flow into the master sheet and refresh here automatically.
           </p>
         </div>
-        <nav className="topnav">
-          <Link href="/">Home</Link>
-          <Link href="/dashboard/service-wise">Service Wise View</Link>
-        </nav>
+        <PortalNav />
       </header>
 
       <section className="panel panel-hero">

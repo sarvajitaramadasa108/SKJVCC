@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AssignedVolunteersPanel from "@/components/AssignedVolunteersPanel";
+import PortalNav from "@/components/PortalNav";
 
 export default function AssignedVolunteersPage() {
   return (
@@ -12,11 +13,7 @@ export default function AssignedVolunteersPage() {
             Review volunteers who already have a service, then update the allocation if needed.
           </p>
         </div>
-        <nav className="topnav">
-          <Link href="/">Home</Link>
-          <Link href="/dashboard/registrations">Live Registrations</Link>
-          <Link href="/dashboard/service-wise">Service Wise View</Link>
-        </nav>
+        <PortalNav />
       </header>
 
       <AssignedVolunteersPanel />

@@ -1,23 +1,27 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import PortalNav from "@/components/PortalNav";
 import { readJsonResponse } from "@/components/registryUtils";
 
 const SERVICES_CACHE_KEY = "skjvcc_services_cache";
+const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
 
 export default function AssignmentStatusDashboard() {
   const [services, setServices] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let alive = true;
 
-    async function loadServices() {
-      const cached = readCachedServices();
-      if (cached.length) {
-        setServices(cached);
+    async function loadData() {
+      const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
+      const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
+      if (cachedServices.length || cachedRegistrations.length) {
+        setServices(cachedServices);
+        setRegistrations(cachedRegistrations);
         setLoading(false);
       }
 
@@ -31,40 +35,17 @@ export default function AssignmentStatusDashboard() {
           readJsonResponse(registrationsResponse)
         ]);
         if (!alive) return;
-        const serviceRows = Array.isArray(servicesPayload.data) ? servicesPayload.data : [];
-        const assignedCounts = buildAssignedCounts(Array.isArray(registrationsPayload.data) ? registrationsPayload.data : []);
-        const nextServices = serviceRows.map((service, index) => {
-          const serviceName = String(service.serviceName || "").trim();
-          const required = Number(service.requiredCount || 0);
-          const allocated = assignedCounts[serviceName] || 0;
-          return {
-            id: serviceName || `service-${index}`,
-            serialNo: index + 1,
-            serviceName: serviceName || "-",
-            required,
-            allocated,
-            pending: Math.max(required - allocated, 0)
-          };
-        });
-        const seenNames = new Set(nextServices.map((service) => service.serviceName));
-        for (const serviceName of Object.keys(assignedCounts)) {
-          if (seenNames.has(serviceName)) continue;
-          const allocated = assignedCounts[serviceName] || 0;
-          nextServices.push({
-            id: serviceName,
-            serialNo: nextServices.length + 1,
-            serviceName,
-            required: 0,
-            allocated,
-            pending: 0
-          });
-        }
+        const nextServices = Array.isArray(servicesPayload.data) ? servicesPayload.data : [];
+        const nextRegistrations = Array.isArray(registrationsPayload.data) ? registrationsPayload.data : [];
         setServices(nextServices);
-        writeCachedServices(nextServices);
+        setRegistrations(nextRegistrations);
+        writeCachedJson(SERVICES_CACHE_KEY, nextServices);
+        writeCachedJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
         setMessage("");
       } catch (error) {
-        if (alive && !cached.length) {
+        if (alive && !cachedServices.length && !cachedRegistrations.length) {
           setServices([]);
+          setRegistrations([]);
           setMessage(error.message || "Could not load assignment status");
         }
       } finally {
@@ -72,16 +53,43 @@ export default function AssignmentStatusDashboard() {
       }
     }
 
-    loadServices();
+    loadData();
     return () => {
       alive = false;
     };
   }, []);
 
-  const rows = useMemo(
-    () => services,
-    [services]
-  );
+  const rows = useMemo(() => {
+    const assignedCounts = buildAssignedCounts(registrations);
+    const serviceRows = services.map((service, index) => {
+      const serviceName = String(service.serviceName || "").trim();
+      const required = Number(service.requiredCount || 0);
+      const allocated = assignedCounts[serviceName] || Number(service.allocatedCount || 0) || 0;
+      return {
+        id: serviceName || `service-${index}`,
+        serialNo: index + 1,
+        serviceName: serviceName || "-",
+        required,
+        allocated,
+        pending: Math.max(required - allocated, 0)
+      };
+    });
+
+    const seenNames = new Set(serviceRows.map((service) => service.serviceName));
+    for (const serviceName of Object.keys(assignedCounts)) {
+      if (seenNames.has(serviceName)) continue;
+      const allocated = assignedCounts[serviceName] || 0;
+      serviceRows.push({
+        id: serviceName,
+        serialNo: serviceRows.length + 1,
+        serviceName,
+        required: 0,
+        allocated,
+        pending: 0
+      });
+    }
+    return serviceRows;
+  }, [services, registrations]);
 
   return (
     <main className="page-shell">
@@ -91,12 +99,7 @@ export default function AssignmentStatusDashboard() {
           <h1>Status of Assignment</h1>
           <p className="subtle">Required counts come from Service Master sheet column G.</p>
         </div>
-        <nav className="topnav">
-          <Link href="/">Home</Link>
-          <Link href="/dashboard/registrations">Live Registrations</Link>
-          <Link href="/dashboard/assigned-volunteers">Assigned Volunteers</Link>
-          <Link href="/dashboard/service-wise">Service Wise View</Link>
-        </nav>
+        <PortalNav />
       </header>
 
       {message ? <section className="notice">{message}</section> : null}
@@ -142,10 +145,10 @@ export default function AssignmentStatusDashboard() {
   );
 }
 
-function readCachedServices() {
+function readCachedJson(key) {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(SERVICES_CACHE_KEY);
+    const raw = window.localStorage.getItem(key);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -154,9 +157,9 @@ function readCachedServices() {
   }
 }
 
-function writeCachedServices(services) {
+function writeCachedJson(key, value) {
   try {
-    window.localStorage.setItem(SERVICES_CACHE_KEY, JSON.stringify(Array.isArray(services) ? services : []));
+    window.localStorage.setItem(key, JSON.stringify(Array.isArray(value) ? value : []));
   } catch {
     // Ignore cache failures.
   }

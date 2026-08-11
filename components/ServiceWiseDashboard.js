@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 20000;
 const SERVICES_CACHE_KEY = "skjvcc_services_cache";
@@ -150,12 +151,7 @@ export default function ServiceWiseDashboard() {
             Pick a service, review the assigned volunteers, and export the list as Excel.
           </p>
         </div>
-        <nav className="topnav">
-          <Link href="/">Home</Link>
-          <Link href="/dashboard/registrations">Live Registrations</Link>
-          <Link href="/dashboard/assigned-volunteers">Assigned Volunteers</Link>
-          <Link href="/dashboard/assignment-status">Status of Assignment</Link>
-        </nav>
+        <PortalNav />
       </header>
 
       <section className="panel">
