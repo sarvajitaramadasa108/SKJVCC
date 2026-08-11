@@ -11,7 +11,6 @@ function emptyImage() {
 export default function RegistrationsDashboard() {
   const [registrations, setRegistrations] = useState([]);
   const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
@@ -21,21 +20,25 @@ export default function RegistrationsDashboard() {
 
   useEffect(() => {
     let alive = true;
+    const cachedRegistrations = readCachedJson("skjvcc_registrations_cache");
+    const cachedServices = readCachedJson("skjvcc_services_cache");
+    if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
+    if (Array.isArray(cachedServices)) setServices(cachedServices);
 
     async function loadRegistrations() {
+      setRefreshing(true);
       try {
         const registrationsPayload = await fetchBridge("registrations.list");
         if (!alive) return;
-        setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
+        const next = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+        setRegistrations(next);
+        cacheJson("skjvcc_registrations_cache", next);
       } catch (error) {
         if (alive) {
           setMessage(error.message || "Could not load registrations");
-          setRegistrations([]);
         }
       } finally {
-        if (alive) {
-          setLoading(false);
-        }
+        if (alive) setRefreshing(false);
       }
     }
 
@@ -43,7 +46,9 @@ export default function RegistrationsDashboard() {
       try {
         const servicesPayload = await fetchBridge("services.list");
         if (!alive) return;
-        setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+        const next = Array.isArray(servicesPayload) ? servicesPayload : [];
+        setServices(next);
+        cacheJson("skjvcc_services_cache", next);
       } catch {
         if (alive) setServices([]);
       }
@@ -186,9 +191,7 @@ export default function RegistrationsDashboard() {
           </div>
         </div>
 
-        {loading ? (
-          <div className="empty-state">Loading registrations...</div>
-        ) : filteredRegistrations.length ? (
+        {filteredRegistrations.length ? (
           <div className="table-wrap">
             <table className="data-table">
               <thead>
@@ -288,7 +291,9 @@ export default function RegistrationsDashboard() {
             </table>
           </div>
         ) : (
-          <div className="empty-state">No registrations found yet.</div>
+          <div className="empty-state">
+            {refreshing ? "Loading latest registrations..." : "No registrations found yet."}
+          </div>
         )}
       </section>
 
@@ -367,4 +372,21 @@ async function fetchBridge(action, payload = {}) {
     throw new Error(data?.error || "Request failed");
   }
   return data.data;
+}
+
+function cacheJson(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore cache failures
+  }
+}
+
+function readCachedJson(key) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
 }
