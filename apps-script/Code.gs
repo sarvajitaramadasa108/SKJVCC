@@ -201,11 +201,11 @@ function ensureServiceHeader(sheet) {
   const headers = [
     "S No",
     "Service Name",
-    "Coordinator Name",
-    "Coordinator Contact Number",
+    "Service Coordinator",
+    "Contact Number",
     "Reporting Time",
-    "Required Count",
-    "Coordinator Photo Link",
+    "Photo",
+    "No. of Required Volunteers",
     "Active"
   ];
   ensureHeaders_(sheet, headers);
@@ -339,7 +339,7 @@ function buildHeaderMap(headerRow) {
     assignedService: findHeaderIndex_(normalized, ["assigned service", "service"]),
     assignmentUpdatedAt: findHeaderIndex_(normalized, ["assignment updated at"]),
     serviceName: findHeaderIndex_(normalized, ["service name"]),
-    coordinatorName: findHeaderIndex_(normalized, ["coordinator name"]),
+    coordinatorName: findHeaderIndex_(normalized, ["coordinator name", "service coordinator"]),
     contactNumber: findHeaderIndex_(normalized, ["coordinator contact number", "contact number"]),
     reportingTime: findHeaderIndex_(normalized, ["reporting time"]),
     requiredCount: findHeaderIndex_(normalized, ["required count", "number of volunteers required", "no of required volunteers"]),

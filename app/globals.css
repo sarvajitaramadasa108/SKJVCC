@@ -211,6 +211,23 @@ h2 {
   overflow: visible;
 }
 
+.assignment-status-panel {
+  flex: 1 1 auto;
+  min-height: calc(100vh - 190px);
+  overflow: hidden;
+}
+
+.assignment-status-head {
+  margin-bottom: 18px;
+}
+
+.panel-head-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+}
+
 .panel-hero {
   background:
     linear-gradient(180deg, rgba(255, 250, 244, 0.98), rgba(255, 245, 229, 0.95)),
@@ -359,7 +376,9 @@ button:disabled {
 
 .assignment-table-wrap {
   overflow: auto;
-  max-height: min(72vh, calc(100vh - 320px));
+  max-height: none;
+  flex: 1 1 auto;
+  height: calc(100vh - 320px);
 }
 
 .assignment-table {

@@ -117,8 +117,8 @@ export default function AssignmentStatusDashboard() {
 
       {message ? <section className="notice">{message}</section> : null}
 
-      <section className="panel table-panel">
-        <div className="panel-head">
+      <section className="panel table-panel assignment-status-panel">
+        <div className="panel-head assignment-status-head">
           <div className="panel-head-row">
             <div>
               <h2>Assignment status by service</h2>
