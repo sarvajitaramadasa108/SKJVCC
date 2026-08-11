@@ -48,7 +48,6 @@ export default function ServiceWiseDashboard() {
     }
 
     let alive = true;
-    let timer = null;
 
     async function loadRows() {
       try {
@@ -67,11 +66,9 @@ export default function ServiceWiseDashboard() {
     }
 
     loadRows();
-    timer = window.setInterval(loadRows, 20000);
 
     return () => {
       alive = false;
-      if (timer) window.clearInterval(timer);
     };
   }, [selectedService]);
 

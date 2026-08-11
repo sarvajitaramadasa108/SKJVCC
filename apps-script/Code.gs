@@ -52,9 +52,16 @@ function syncFormResponsesToMaster() {
   const formHeaders = buildHeaderMap(values[0]);
   const masterRows = master.getDataRange().getValues();
   const masterIndex = buildSourceRowIndex_(masterRows);
+  const scriptProps = PropertiesService.getScriptProperties();
+  const lastSyncedRow = Number(scriptProps.getProperty("VOLUNTEER_LAST_SYNCED_RESPONSE_ROW") || 1);
+  const startRow = Math.max(2, lastSyncedRow + 1);
+  if (startRow > values.length) {
+    return { synced: 0 };
+  }
+
   let synced = 0;
 
-  for (let i = 1; i < values.length; i++) {
+  for (let i = startRow - 1; i < values.length; i++) {
     const sourceRow = i + 1;
     const row = values[i];
     if (isFormHeaderRow_(row)) continue;
@@ -64,6 +71,7 @@ function syncFormResponsesToMaster() {
     synced += 1;
   }
 
+  scriptProps.setProperty("VOLUNTEER_LAST_SYNCED_RESPONSE_ROW", String(values.length));
   return { synced: synced };
 }
 
@@ -75,16 +83,14 @@ function listRegistrations() {
   if (rows.length < 2) return [];
 
   const headers = buildHeaderMap(rows[0]);
-  const records = rows
+  return rows
     .slice(1)
     .map(function (row, index) {
       return mapMasterRow_(row, headers, index + 2);
     })
     .filter(function (row) {
-      return isValidMasterRecord_(row);
+      return isValidMasterRecord_(row) && !isFormHeaderRow_(rows[row.rowNumber - 1]);
     });
-  pruneInvalidMasterRows_(sheet, rows, headers);
-  return records;
 }
 
 function registrationsByService(serviceName) {
@@ -442,38 +448,54 @@ function getRegistrationPhoto(payload) {
     throw new Error("No photo file found");
   }
 
-  const file = DriveApp.getFileById(fileId);
-  const candidates = [];
-
-  try {
-    const blob = file.getBlob();
-    if (blob) candidates.push(blob);
-  } catch (error) {
-    // ignore and fall back to thumbnail
-  }
-
-  try {
-    const thumbnail = file.getThumbnail();
-    if (thumbnail) candidates.push(thumbnail);
-  } catch (error) {
-    // ignore and fall back to URL
-  }
-
-  for (let i = 0; i < candidates.length; i++) {
-    const blob = candidates[i];
-    const mimeType = String(blob.getContentType() || "").trim();
-    if (mimeType && mimeType.indexOf("image/") === 0) {
-      return {
-        mimeType: mimeType,
-        dataUrl: "data:" + mimeType + ";base64," + Utilities.base64Encode(blob.getBytes())
-      };
-    }
+  const imageBytes = fetchDriveImageBytes_(fileId);
+  if (imageBytes) {
+    return {
+      mimeType: imageBytes.mimeType,
+      dataUrl: imageBytes.dataUrl
+    };
   }
 
   return {
     mimeType: "image/jpeg",
     imageUrl: "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w1200"
   };
+}
+
+function fetchDriveImageBytes_(fileId) {
+  const token = ScriptApp.getOAuthToken();
+  const urls = [
+    "https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(fileId) + "?alt=media",
+    DriveApp.getFileById(fileId).getDownloadUrl()
+  ];
+
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i];
+    if (!url) continue;
+    try {
+      const response = UrlFetchApp.fetch(url, {
+        headers: {
+          Authorization: "Bearer " + token
+        },
+        followRedirects: true,
+        muteHttpExceptions: true
+      });
+      if (response.getResponseCode() !== 200) continue;
+      const headers = response.getHeaders() || {};
+      const contentType = String(headers["Content-Type"] || headers["content-type"] || "").trim();
+      if (contentType.indexOf("image/") !== 0) continue;
+      const bytes = response.getContent();
+      if (!bytes || !bytes.length) continue;
+      return {
+        mimeType: contentType,
+        dataUrl: "data:" + contentType + ";base64," + Utilities.base64Encode(bytes)
+      };
+    } catch (error) {
+      // try the next URL
+    }
+  }
+
+  return null;
 }
 
 function extractDriveFileId_(value) {

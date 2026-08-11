@@ -21,7 +21,6 @@ export default function RegistrationsDashboard() {
 
   useEffect(() => {
     let alive = true;
-    let timer = null;
 
     async function loadRegistrations() {
       try {
@@ -52,17 +51,9 @@ export default function RegistrationsDashboard() {
 
     loadRegistrations();
     loadServices();
-    timer = window.setInterval(() => {
-      setRefreshing(true);
-      loadRegistrations().finally(() => {
-        if (alive) setRefreshing(false);
-      });
-      loadServices();
-    }, 15000);
 
     return () => {
       alive = false;
-      if (timer) window.clearInterval(timer);
     };
   }, []);
 

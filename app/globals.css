@@ -202,6 +202,7 @@ h2 {
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: calc(100vh - 120px);
 }
 
 .panel-hero {
@@ -338,7 +339,7 @@ button:disabled {
   border: 1px solid rgba(112, 76, 36, 0.12);
   flex: 1;
   min-height: 0;
-  max-height: none;
+  height: calc(100vh - 380px);
 }
 
 .data-table {
@@ -474,6 +475,14 @@ button:disabled {
     padding: 16px;
   }
 
+  .table-panel {
+    height: auto;
+  }
+
+  .table-wrap {
+    height: calc(100vh - 320px);
+  }
+
   .hero,
   .panel,
   .notice,
@@ -503,5 +512,9 @@ button:disabled {
 
   .eyebrow {
     letter-spacing: 0.08em;
+  }
+
+  .table-wrap {
+    height: calc(100vh - 300px);
   }
 }
