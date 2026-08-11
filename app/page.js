@@ -1,5 +1,4 @@
 import Link from "next/link";
-import AssignedVolunteersPanel from "@/components/AssignedVolunteersPanel";
 
 export default function HomePage() {
   return (
@@ -17,13 +16,15 @@ export default function HomePage() {
           <h2>Live Registrations</h2>
           <p>View every registered volunteer, see availability flags, preview images, and assign services from the table.</p>
         </Link>
+        <Link className="card-link" href="/dashboard/assigned-volunteers">
+          <h2>Assigned Volunteers</h2>
+          <p>Review volunteers who already have a service and change the allocation when needed.</p>
+        </Link>
         <Link className="card-link" href="/dashboard/service-wise">
           <h2>Service Wise View</h2>
           <p>Select a service, inspect the assigned volunteers, and download the result as Excel.</p>
         </Link>
       </section>
-
-      <AssignedVolunteersPanel />
     </main>
   );
 }
