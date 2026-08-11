@@ -11,39 +11,31 @@ export default function AssignmentStatusDashboard() {
   const [services, setServices] = useState([]);
   const [registrations, setRegistrations] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let alive = true;
 
     async function loadData() {
-      const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
-      const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
-      if (cachedServices.length || cachedRegistrations.length) {
-        setServices(cachedServices);
-        setRegistrations(cachedRegistrations);
-        setLoading(false);
-      }
-
       try {
-        const [servicesResponse, registrationsResponse] = await Promise.all([
-          fetch("/api/bridge?action=services.list", { cache: "no-store" }),
-          fetch("/api/bridge?action=registrations.list", { cache: "no-store" })
-        ]);
-        const [servicesPayload, registrationsPayload] = await Promise.all([
-          readJsonResponse(servicesResponse),
-          readJsonResponse(registrationsResponse)
-        ]);
+        const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
+        const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
+        if (cachedServices.length || cachedRegistrations.length) {
+          setServices(cachedServices);
+          setRegistrations(cachedRegistrations);
+        }
+
+        const nextServices = await fetchServicesFresh();
+        const nextRegistrations = await fetchRegistrationsFresh();
         if (!alive) return;
-        const nextServices = Array.isArray(servicesPayload.data) ? servicesPayload.data : [];
-        const nextRegistrations = Array.isArray(registrationsPayload.data) ? registrationsPayload.data : [];
         setServices(nextServices);
         setRegistrations(nextRegistrations);
         writeCachedJson(SERVICES_CACHE_KEY, nextServices);
         writeCachedJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
         setMessage("");
       } catch (error) {
-        if (alive && !cachedServices.length && !cachedRegistrations.length) {
+        if (alive) {
           setServices([]);
           setRegistrations([]);
           setMessage(error.message || "Could not load assignment status");
@@ -58,6 +50,27 @@ export default function AssignmentStatusDashboard() {
       alive = false;
     };
   }, []);
+
+  async function refreshNow() {
+    setRefreshing(true);
+    setMessage("");
+    try {
+      const [nextServices, nextRegistrations] = await Promise.all([
+        fetchServicesFresh(),
+        fetchRegistrationsFresh()
+      ]);
+      setServices(nextServices);
+      setRegistrations(nextRegistrations);
+      writeCachedJson(SERVICES_CACHE_KEY, nextServices);
+      writeCachedJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
+      setMessage("Assignment status refreshed.");
+    } catch (error) {
+      setMessage(error.message || "Could not refresh assignment status");
+    } finally {
+      setRefreshing(false);
+      setLoading(false);
+    }
+  }
 
   const rows = useMemo(() => {
     const assignedCounts = buildAssignedCounts(registrations);
@@ -106,8 +119,17 @@ export default function AssignmentStatusDashboard() {
 
       <section className="panel table-panel">
         <div className="panel-head">
-          <h2>Assignment status by service</h2>
-          <p className="subtle-dark">Required, allocated, and pending counts are calculated from the same service master data.</p>
+          <div className="panel-head-row">
+            <div>
+              <h2>Assignment status by service</h2>
+              <p className="subtle-dark">Required, allocated, and pending counts are calculated from the same service master data.</p>
+            </div>
+            <div className="actions">
+              <button type="button" onClick={refreshNow} disabled={loading || refreshing}>
+                {refreshing ? "Refreshing..." : "Refresh"}
+              </button>
+            </div>
+          </div>
         </div>
 
         {loading && !rows.length ? (
@@ -163,6 +185,24 @@ function writeCachedJson(key, value) {
   } catch {
     // Ignore cache failures.
   }
+}
+
+async function fetchServicesFresh() {
+  const response = await fetch("/api/bridge?action=services.list", { cache: "no-store" });
+  const payload = await readJsonResponse(response);
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(payload?.error || "Could not load services");
+  }
+  return Array.isArray(payload.data) ? payload.data : [];
+}
+
+async function fetchRegistrationsFresh() {
+  const response = await fetch("/api/bridge?action=registrations.list", { cache: "no-store" });
+  const payload = await readJsonResponse(response);
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(payload?.error || "Could not load registrations");
+  }
+  return Array.isArray(payload.data) ? payload.data : [];
 }
 
 function buildAssignedCounts(registrations) {
