@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 
 const REQUEST_TIMEOUT_MS = 30000;
+const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
+const SERVICES_CACHE_KEY = "skjvcc_services_cache";
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
@@ -21,6 +23,14 @@ export default function AssignedVolunteersPanel() {
 
   useEffect(() => {
     let alive = true;
+    const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
+    const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
+
+    if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
+    if (Array.isArray(cachedServices)) setServices(cachedServices);
+    if (Array.isArray(cachedRegistrations) || Array.isArray(cachedServices)) {
+      setLoading(false);
+    }
 
     async function load() {
       try {
@@ -31,11 +41,15 @@ export default function AssignedVolunteersPanel() {
         if (!alive) return;
         setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
         setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+        cacheJson(REGISTRATIONS_CACHE_KEY, Array.isArray(registrationsPayload) ? registrationsPayload : []);
+        cacheJson(SERVICES_CACHE_KEY, Array.isArray(servicesPayload) ? servicesPayload : []);
       } catch (error) {
         if (alive) {
-          setMessage(error.message || "Could not load assigned volunteers");
-          setRegistrations([]);
-          setServices([]);
+          if (!cachedRegistrations?.length && !cachedServices?.length) {
+            setMessage(error.message || "Could not load assigned volunteers");
+            setRegistrations([]);
+            setServices([]);
+          }
         }
       } finally {
         if (alive) {
@@ -64,8 +78,12 @@ export default function AssignedVolunteersPanel() {
         fetchBridge("registrations.list"),
         fetchBridge("services.list")
       ]);
-      setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
-      setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+      const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+      const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
+      setRegistrations(nextRegistrations);
+      setServices(nextServices);
+      cacheJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
+      cacheJson(SERVICES_CACHE_KEY, nextServices);
     } catch (error) {
       setMessage(error.message || "Could not refresh assigned volunteers");
     } finally {
@@ -297,5 +315,22 @@ async function fetchBridge(action, payload = {}) {
     throw error;
   } finally {
     window.clearTimeout(timeout);
+  }
+}
+
+function cacheJson(key, value) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    // ignore cache failures
+  }
+}
+
+function readCachedJson(key) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
   }
 }
