@@ -110,13 +110,16 @@ function assignService(payload) {
   const headers = buildHeaderMap(rows[0]);
   const sourceRow = Number(payload.sourceRow || 0);
   const serviceName = String(payload.serviceName || "").trim();
+  const category = String(payload.category || "").trim();
   if (!serviceName) throw new Error("Select a service");
+  if (!category) throw new Error("Select a category");
 
   const targetRow = findMasterRowBySourceRow_(rows, sourceRow);
   if (targetRow < 2) throw new Error("Registration not found");
 
   const current = rows[targetRow - 1];
   current[headers.assignedService] = serviceName;
+  current[headers.assignedCategory] = category;
   current[headers.assignmentUpdatedAt] = formatNow_();
   sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
 
@@ -198,8 +201,23 @@ function ensureMasterHeader(sheet) {
     AVAILABILITY_COLUMNS[3],
     "Photo upload",
     "Assigned Service",
+    "Assigned Category",
     "Assignment Updated At"
   ];
+  if (sheet.getLastRow() > 0) {
+    const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
+    const normalized = currentHeaders.map(function (cell) {
+      return normalizeHeader_(cell);
+    });
+    if (normalized.indexOf("assigned category") === -1) {
+      const assignmentHeaderIndex = normalized.indexOf("assignment updated at");
+      if (assignmentHeaderIndex >= 0) {
+        sheet.insertColumnBefore(assignmentHeaderIndex + 1);
+      } else if (sheet.getLastColumn() < headers.length) {
+        sheet.insertColumnBefore(sheet.getLastColumn() + 1);
+      }
+    }
+  }
   ensureHeaders_(sheet, headers);
 }
 
@@ -323,6 +341,7 @@ function mapMasterRow_(row, headers, rowNumber) {
     availabilityMap: availabilityMap,
     photoUpload: String(row[headers.photoUpload] || "").trim(),
     assignedService: String(row[headers.assignedService] || "").trim(),
+    assignedCategory: String(row[headers.assignedCategory] || "").trim(),
     assignmentUpdatedAt: String(row[headers.assignmentUpdatedAt] || "").trim()
   };
 }
@@ -355,6 +374,7 @@ function buildHeaderMap(headerRow) {
     requiredFolkCount: findHeaderIndex_(normalized, ["no. of req folk volunteers", "req folk volunteers", "folk volunteers"]),
     requiredEmpCount: findHeaderIndex_(normalized, ["no. of req emp volunteers", "req emp volunteers", "emp volunteers"]),
     photoUrl: findHeaderIndex_(normalized, ["coordinator photo link", "photo url", "photo"]),
+    assignedCategory: findHeaderIndex_(normalized, ["assigned category", "category"]),
     active: findHeaderIndex_(normalized, ["active"])
   };
 }

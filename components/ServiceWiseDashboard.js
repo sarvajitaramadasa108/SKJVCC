@@ -107,7 +107,7 @@ export default function ServiceWiseDashboard() {
       "S No",
       "Full Name",
       "Age",
-      "Gender",
+      "Category",
       "Mobile Number",
       "Devotee in Touch",
       "Area of Staying in Vizag",
@@ -118,7 +118,7 @@ export default function ServiceWiseDashboard() {
       index + 1,
       row.fullName || "",
       row.age || "",
-      row.gender || "",
+      row.assignedCategory || "",
       row.mobileNumber || "",
       row.devoteeInTouch || "",
       row.areaOfStay || "",
@@ -202,30 +202,30 @@ export default function ServiceWiseDashboard() {
             <div className="table-wrap">
               <table className="data-table">
                 <thead>
-                  <tr>
-                    <th>S No</th>
-                    <th>Full Name</th>
-                    <th>Mobile Number</th>
-                    <th>Gender</th>
-                    <th>Age</th>
-                    <th>Area of Staying in Vizag</th>
-                    {AVAILABILITY_COLUMNS.map((column) => (
-                      <th key={column}>{column}</th>
-                    ))}
-                    <th>Photo</th>
+                <tr>
+                  <th>S No</th>
+                  <th>Full Name</th>
+                  <th>Mobile Number</th>
+                  <th>Age</th>
+                  <th>Category</th>
+                  <th>Area of Staying in Vizag</th>
+                  {AVAILABILITY_COLUMNS.map((column) => (
+                    <th key={column}>{column}</th>
+                  ))}
+                  <th>Photo</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rows.map((row, index) => (
-                    <tr key={row.sourceRow || `${row.mobileNumber}-${index}`}>
-                      <td>{index + 1}</td>
-                      <td>{row.fullName || "-"}</td>
-                      <td>{row.mobileNumber || "-"}</td>
-                      <td>{row.gender || "-"}</td>
-                      <td>{row.age || "-"}</td>
-                      <td>{row.areaOfStay || "-"}</td>
-                      {AVAILABILITY_COLUMNS.map((column) => (
-                        <td key={`${row.sourceRow}-${column}`}>
+                  <tr key={row.sourceRow || `${row.mobileNumber}-${index}`}>
+                    <td>{index + 1}</td>
+                    <td>{row.fullName || "-"}</td>
+                    <td>{row.mobileNumber || "-"}</td>
+                    <td>{row.age || "-"}</td>
+                    <td>{row.assignedCategory || "-"}</td>
+                    <td>{row.areaOfStay || "-"}</td>
+                    {AVAILABILITY_COLUMNS.map((column) => (
+                      <td key={`${row.sourceRow}-${column}`}>
                           <span className={row.availabilityMap?.[column] ? "badge badge-yes" : "badge badge-no"}>
                             {row.availabilityMap?.[column] ? "Available" : "Not available"}
                           </span>

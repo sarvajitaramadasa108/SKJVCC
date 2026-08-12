@@ -20,6 +20,8 @@ export default function AssignedVolunteersPanel() {
   const [message, setMessage] = useState("");
   const [viewer, setViewer] = useState(emptyImage());
   const [editingRow, setEditingRow] = useState(null);
+  const [assignmentDrafts, setAssignmentDrafts] = useState({});
+  const categoryOptions = ["FOLK", "Congregation", "Employee"];
 
   useEffect(() => {
     let alive = true;
@@ -92,14 +94,44 @@ export default function AssignedVolunteersPanel() {
   }
 
   async function handleAssignService(row, nextService) {
-    if (!nextService) return;
+    const draft = assignmentDrafts[row.sourceRow] || {};
+    const serviceName = String(nextService || "").trim();
+    const category = String(draft.category || row.assignedCategory || "").trim();
+    setAssignmentDrafts((current) => ({
+      ...current,
+      [row.sourceRow]: {
+        ...(current[row.sourceRow] || {}),
+        serviceName
+      }
+    }));
+    if (!serviceName || !category) return;
+    await saveAssignment(row, serviceName, category);
+  }
+
+  async function handleAssignCategory(row, nextCategory) {
+    const draft = assignmentDrafts[row.sourceRow] || {};
+    const serviceName = String(draft.serviceName || row.assignedService || "").trim();
+    const category = String(nextCategory || "").trim();
+    setAssignmentDrafts((current) => ({
+      ...current,
+      [row.sourceRow]: {
+        ...(current[row.sourceRow] || {}),
+        category
+      }
+    }));
+    if (!serviceName || !category) return;
+    await saveAssignment(row, serviceName, category);
+  }
+
+  async function saveAssignment(row, serviceName, category) {
     setSavingRow(row.sourceRow);
     setMessage("");
     try {
       const payload = await fetchBridge("registrations.assignService", {
         sourceRow: row.sourceRow,
         mobileNumber: row.mobileNumber,
-        serviceName: nextService
+        serviceName,
+        category
       });
       const updated = payload?.registration || null;
       if (updated) {
@@ -109,12 +141,19 @@ export default function AssignedVolunteersPanel() {
       } else {
         setRegistrations((current) =>
           current.map((item) =>
-            item.sourceRow === row.sourceRow ? { ...item, assignedService: nextService } : item
+            item.sourceRow === row.sourceRow
+              ? { ...item, assignedService: serviceName, assignedCategory: category }
+              : item
           )
         );
       }
       setEditingRow(null);
-      setMessage(`Assigned ${nextService} to ${row.fullName || row.mobileNumber || "registration"}`);
+      setAssignmentDrafts((current) => {
+        const next = { ...current };
+        delete next[row.sourceRow];
+        return next;
+      });
+      setMessage(`Assigned ${serviceName} to ${row.fullName || row.mobileNumber || "registration"}`);
     } catch (error) {
       setMessage(error.message || "Could not update service");
     } finally {
@@ -159,7 +198,6 @@ export default function AssignedVolunteersPanel() {
                 <th>S No</th>
                 <th>Full Name</th>
                 <th>Age</th>
-                <th>Gender</th>
                 <th>Mobile Number</th>
                 <th>Devotee in Touch</th>
                 <th>Area of Staying in Vizag</th>
@@ -168,18 +206,19 @@ export default function AssignedVolunteersPanel() {
                 ))}
                 <th>Photo</th>
                 <th>Service</th>
+                <th>Category</th>
               </tr>
             </thead>
             <tbody>
               {assignedRegistrations.map((row) => {
                 const isEditing = editingRow === row.sourceRow;
                 const serviceOptions = services.map((service) => service.serviceName).filter(Boolean);
+                const draft = assignmentDrafts[row.sourceRow] || {};
                 return (
                   <tr key={row.sourceRow}>
                     <td>{row.serialNo || row.sourceRow || "-"}</td>
                     <td>{row.fullName || "-"}</td>
                     <td>{row.age || "-"}</td>
-                    <td>{row.gender || "-"}</td>
                     <td>{row.mobileNumber || "-"}</td>
                     <td>{row.devoteeInTouch || "-"}</td>
                     <td>{row.areaOfStay || "-"}</td>
@@ -221,7 +260,16 @@ export default function AssignedVolunteersPanel() {
                             <button
                               type="button"
                               className="link-button link-button-small"
-                              onClick={() => setEditingRow(row.sourceRow)}
+                              onClick={() => {
+                                setEditingRow(row.sourceRow);
+                                setAssignmentDrafts((current) => ({
+                                  ...current,
+                                  [row.sourceRow]: {
+                                    serviceName: row.assignedService || "",
+                                    category: row.assignedCategory || ""
+                                  }
+                                }));
+                              }}
                             >
                               Change service
                             </button>
@@ -229,7 +277,7 @@ export default function AssignedVolunteersPanel() {
                         ) : (
                           <>
                             <select
-                              value={row.assignedService || ""}
+                              value={draft.serviceName || row.assignedService || ""}
                               onChange={(event) => handleAssignService(row, event.target.value)}
                               disabled={savingRow === row.sourceRow || !serviceOptions.length}
                             >
@@ -244,12 +292,62 @@ export default function AssignedVolunteersPanel() {
                               <button
                                 type="button"
                                 className="link-button link-button-small"
-                                onClick={() => setEditingRow(null)}
+                                onClick={() => {
+                                  setEditingRow(null);
+                                  setAssignmentDrafts((current) => {
+                                    const next = { ...current };
+                                    delete next[row.sourceRow];
+                                    return next;
+                                  });
+                                }}
                               >
                                 Cancel
                               </button>
                             ) : null}
                           </>
+                        )}
+                      </div>
+                    </td>
+                    <td>
+                      <div className="service-cell">
+                        {savingRow === row.sourceRow ? (
+                          <div className="saving-pill">
+                            <span className="loading-spinner" aria-hidden="true" />
+                            <span>Saving...</span>
+                          </div>
+                        ) : row.assignedCategory && !isEditing ? (
+                          <>
+                            <strong className="service-name-large">{row.assignedCategory}</strong>
+                            <button
+                              type="button"
+                              className="link-button link-button-small"
+                              onClick={() => {
+                                setEditingRow(row.sourceRow);
+                                setAssignmentDrafts((current) => ({
+                                  ...current,
+                                  [row.sourceRow]: {
+                                    serviceName: row.assignedService || "",
+                                    category: row.assignedCategory || ""
+                                  }
+                                }));
+                              }}
+                            >
+                              Change category
+                            </button>
+                          </>
+                        ) : (
+                          <select
+                            value={draft.category || row.assignedCategory || ""}
+                            onChange={(event) => handleAssignCategory(row, event.target.value)}
+                            disabled={savingRow === row.sourceRow}
+                          >
+                            <option value="">Select category</option>
+                            {categoryOptions.map((category) => (
+                              <option key={category} value={category}>
+                                {category}
+                              </option>
+                            ))}
+                          </select>
                         )}
                       </div>
                     </td>

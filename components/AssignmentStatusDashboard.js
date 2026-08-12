@@ -76,29 +76,37 @@ export default function AssignmentStatusDashboard() {
     const assignedCounts = buildAssignedCounts(registrations);
     const serviceRows = services.map((service, index) => {
       const serviceName = String(service.serviceName || "").trim();
-      const required = Number(service.requiredCount || 0);
-      const allocated = assignedCounts[serviceName] || Number(service.allocatedCount || 0) || 0;
+      const required = {
+        FOLK: Number(service.requiredFolkCount || 0),
+        Congregation: Number(service.requiredCongCount || 0),
+        Employee: Number(service.requiredEmpCount || 0)
+      };
+      const allocated = assignedCounts[serviceName] || emptyCategoryCounts();
       return {
         id: serviceName || `service-${index}`,
         serialNo: index + 1,
         serviceName: serviceName || "-",
         required,
         allocated,
-        pending: Math.max(required - allocated, 0)
+        pending: {
+          FOLK: Math.max(required.FOLK - allocated.FOLK, 0),
+          Congregation: Math.max(required.Congregation - allocated.Congregation, 0),
+          Employee: Math.max(required.Employee - allocated.Employee, 0)
+        }
       };
     });
 
     const seenNames = new Set(serviceRows.map((service) => service.serviceName));
     for (const serviceName of Object.keys(assignedCounts)) {
       if (seenNames.has(serviceName)) continue;
-      const allocated = assignedCounts[serviceName] || 0;
+      const allocated = assignedCounts[serviceName] || emptyCategoryCounts();
       serviceRows.push({
         id: serviceName,
         serialNo: serviceRows.length + 1,
         serviceName,
-        required: 0,
+        required: emptyCategoryCounts(),
         allocated,
-        pending: 0
+        pending: emptyCategoryCounts()
       });
     }
     return serviceRows;
@@ -110,7 +118,7 @@ export default function AssignmentStatusDashboard() {
         <div>
           <p className="eyebrow">SKJVCC Volunteer Portal</p>
           <h1>Status of Assignment</h1>
-          <p className="subtle">Required counts come from Service Master sheet column G.</p>
+          <p className="subtle">Required counts come from the Service Master category columns.</p>
         </div>
         <PortalNav />
       </header>
@@ -122,7 +130,7 @@ export default function AssignmentStatusDashboard() {
           <div className="panel-head-row">
             <div>
               <h2>Assignment status by service</h2>
-              <p className="subtle-dark">Required, allocated, and pending counts are calculated from the same service master data.</p>
+              <p className="subtle-dark">Required, allocated, and pending counts are calculated category wise from the service master and registration data.</p>
             </div>
             <div className="actions">
               <button type="button" onClick={refreshNow} disabled={loading || refreshing}>
@@ -141,9 +149,15 @@ export default function AssignmentStatusDashboard() {
                 <tr>
                   <th>S No</th>
                   <th>Service Name</th>
-                  <th>No of Volunteers Required</th>
-                  <th>No of Volunteers Allocated</th>
-                  <th>No of Pending Allocations</th>
+                  <th>Req FOLK</th>
+                  <th>Alloc FOLK</th>
+                  <th>Pending FOLK</th>
+                  <th>Req Congregation</th>
+                  <th>Alloc Congregation</th>
+                  <th>Pending Congregation</th>
+                  <th>Req Employee</th>
+                  <th>Alloc Employee</th>
+                  <th>Pending Employee</th>
                 </tr>
               </thead>
               <tbody>
@@ -151,9 +165,15 @@ export default function AssignmentStatusDashboard() {
                   <tr key={row.id}>
                     <td>{row.serialNo}</td>
                     <td><strong>{row.serviceName}</strong></td>
-                    <td>{row.required}</td>
-                    <td>{row.allocated}</td>
-                    <td><strong>{row.pending}</strong></td>
+                    <td>{row.required.FOLK}</td>
+                    <td>{row.allocated.FOLK}</td>
+                    <td><strong>{row.pending.FOLK}</strong></td>
+                    <td>{row.required.Congregation}</td>
+                    <td>{row.allocated.Congregation}</td>
+                    <td><strong>{row.pending.Congregation}</strong></td>
+                    <td>{row.required.Employee}</td>
+                    <td>{row.allocated.Employee}</td>
+                    <td><strong>{row.pending.Employee}</strong></td>
                   </tr>
                 ))}
               </tbody>
@@ -208,8 +228,26 @@ async function fetchRegistrationsFresh() {
 function buildAssignedCounts(registrations) {
   return registrations.reduce((counts, row) => {
     const serviceName = String(row?.assignedService || "").trim();
-    if (!serviceName) return counts;
-    counts[serviceName] = (counts[serviceName] || 0) + 1;
+    const category = normalizeCategory(row?.assignedCategory);
+    if (!serviceName || !category) return counts;
+    if (!counts[serviceName]) counts[serviceName] = emptyCategoryCounts();
+    counts[serviceName][category] = (counts[serviceName][category] || 0) + 1;
     return counts;
   }, {});
+}
+
+function emptyCategoryCounts() {
+  return {
+    FOLK: 0,
+    Congregation: 0,
+    Employee: 0
+  };
+}
+
+function normalizeCategory(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (text === "folk") return "FOLK";
+  if (text === "congregation" || text === "congregational") return "Congregation";
+  if (text === "employee") return "Employee";
+  return "";
 }
