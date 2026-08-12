@@ -94,9 +94,7 @@ export default function AssignedVolunteersPanel() {
   }
 
   async function handleAssignService(row, nextService) {
-    const draft = assignmentDrafts[row.sourceRow] || {};
     const serviceName = String(nextService || "").trim();
-    const category = String(draft.category || row.assignedCategory || "").trim();
     setAssignmentDrafts((current) => ({
       ...current,
       [row.sourceRow]: {
@@ -104,13 +102,9 @@ export default function AssignedVolunteersPanel() {
         serviceName
       }
     }));
-    if (!serviceName || !category) return;
-    await saveAssignment(row, serviceName, category);
   }
 
   async function handleAssignCategory(row, nextCategory) {
-    const draft = assignmentDrafts[row.sourceRow] || {};
-    const serviceName = String(draft.serviceName || row.assignedService || "").trim();
     const category = String(nextCategory || "").trim();
     setAssignmentDrafts((current) => ({
       ...current,
@@ -119,7 +113,16 @@ export default function AssignedVolunteersPanel() {
         category
       }
     }));
-    if (!serviceName || !category) return;
+  }
+
+  async function handleSaveDraft(row) {
+    const draft = assignmentDrafts[row.sourceRow] || {};
+    const serviceName = String(draft.serviceName || row.assignedService || "").trim();
+    const category = String(draft.category || row.assignedCategory || "").trim();
+    if (!serviceName || !category) {
+      setMessage("Select both service and category before saving");
+      return;
+    }
     await saveAssignment(row, serviceName, category);
   }
 
@@ -252,7 +255,7 @@ export default function AssignedVolunteersPanel() {
                             <span className="loading-spinner" aria-hidden="true" />
                             <span>Saving...</span>
                           </div>
-                        ) : row.assignedService && !isEditing ? (
+                          ) : row.assignedService && !isEditing ? (
                           <>
                             <strong className="service-name-large">{row.assignedService}</strong>
                             <button
@@ -275,6 +278,7 @@ export default function AssignedVolunteersPanel() {
                         ) : (
                           <>
                             <select
+                              className="category-select service-select"
                               value={draft.serviceName || row.assignedService || ""}
                               onChange={(event) => handleAssignService(row, event.target.value)}
                               disabled={savingRow === row.sourceRow || !serviceOptions.length}
@@ -286,22 +290,32 @@ export default function AssignedVolunteersPanel() {
                                 </option>
                               ))}
                             </select>
-                            {row.assignedService ? (
+                            <div className="inline-actions">
                               <button
                                 type="button"
                                 className="link-button link-button-small"
-                                onClick={() => {
-                                  setEditingRow(null);
-                                  setAssignmentDrafts((current) => {
-                                    const next = { ...current };
-                                    delete next[row.sourceRow];
-                                    return next;
-                                  });
-                                }}
+                                onClick={() => handleSaveDraft(row)}
+                                disabled={savingRow === row.sourceRow}
                               >
-                                Cancel
+                                Save changes
                               </button>
-                            ) : null}
+                              {row.assignedService ? (
+                                <button
+                                  type="button"
+                                  className="link-button link-button-small"
+                                  onClick={() => {
+                                    setEditingRow(null);
+                                    setAssignmentDrafts((current) => {
+                                      const next = { ...current };
+                                      delete next[row.sourceRow];
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              ) : null}
+                            </div>
                           </>
                         )}
                       </div>
@@ -334,11 +348,11 @@ export default function AssignedVolunteersPanel() {
                             </button>
                           </>
                         ) : (
-                            <select
-                              className="category-select"
-                              value={draft.category || row.assignedCategory || ""}
-                              onChange={(event) => handleAssignCategory(row, event.target.value)}
-                              disabled={savingRow === row.sourceRow}
+                          <select
+                            className="category-select"
+                            value={draft.category || row.assignedCategory || ""}
+                            onChange={(event) => handleAssignCategory(row, event.target.value)}
+                            disabled={savingRow === row.sourceRow}
                           >
                             <option value="">Select category</option>
                             {categoryOptions.map((category) => (

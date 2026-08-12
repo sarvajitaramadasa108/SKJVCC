@@ -800,6 +800,23 @@ button:disabled {
   transform: translateY(-1px);
 }
 
+.service-select {
+  border-color: rgba(180, 122, 38, 0.26);
+  background: linear-gradient(180deg, rgba(255, 251, 244, 0.99), rgba(244, 235, 219, 0.98));
+  color: #6b4f1d;
+}
+
+.service-select:focus {
+  border-color: rgba(180, 122, 38, 0.54);
+  box-shadow: 0 14px 26px rgba(180, 122, 38, 0.12), 0 0 0 3px rgba(180, 122, 38, 0.12);
+}
+
+.inline-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .assigned-volunteers-table .service-cell strong,
 .live-registrations-table .service-cell strong {
   font-size: 13px;
