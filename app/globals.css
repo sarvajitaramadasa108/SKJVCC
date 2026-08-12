@@ -509,6 +509,60 @@ button:disabled {
   background: rgba(255, 250, 243, 0.88);
 }
 
+.service-master-table th,
+.service-master-table td {
+  font-size: 12px;
+  line-height: 1.28;
+  vertical-align: top;
+}
+
+.service-master-table th:nth-child(1),
+.service-master-table td:nth-child(1) {
+  width: 64px;
+}
+
+.service-master-table th:nth-child(2),
+.service-master-table td:nth-child(2) {
+  width: 220px;
+}
+
+.service-master-table th:nth-child(3),
+.service-master-table td:nth-child(3) {
+  width: 180px;
+}
+
+.service-master-table th:nth-child(4),
+.service-master-table td:nth-child(4) {
+  width: 140px;
+}
+
+.service-master-table th:nth-child(5),
+.service-master-table td:nth-child(5) {
+  width: 140px;
+}
+
+.service-master-table th:nth-child(6),
+.service-master-table td:nth-child(6) {
+  width: 112px;
+  text-align: center;
+}
+
+.service-master-table th:nth-child(7),
+.service-master-table td:nth-child(7),
+.service-master-table th:nth-child(8),
+.service-master-table td:nth-child(8),
+.service-master-table th:nth-child(9),
+.service-master-table td:nth-child(9) {
+  width: 150px;
+  text-align: center;
+}
+
+.service-master-table td:nth-child(2) strong {
+  display: block;
+  font-size: 12px;
+  white-space: normal;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;

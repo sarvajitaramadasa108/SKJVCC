@@ -139,7 +139,11 @@ function listServices() {
     const contactNumber = String(row[headers.contactNumber] || row[3] || "").trim();
     const reportingTime = String(row[headers.reportingTime] || row[4] || "").trim();
     const photoUrl = String(row[headers.photoUrl] || row[5] || "").trim();
-    const requiredCount = Number(row[headers.requiredCount] || row[6] || 0);
+    const requiredCongCount = Number(row[headers.requiredCongCount] || row[6] || 0);
+    const requiredFolkCount = Number(row[headers.requiredFolkCount] || row[7] || 0);
+    const requiredEmpCount = Number(row[headers.requiredEmpCount] || row[8] || 0);
+    const totalRequired = requiredCongCount + requiredFolkCount + requiredEmpCount;
+    const requiredCount = Number(row[headers.requiredCount] || 0) || totalRequired;
     const active = headers.active >= 0 ? String(row[headers.active] || "").trim().toLowerCase() !== "false" : true;
 
     return {
@@ -149,6 +153,9 @@ function listServices() {
       contactNumber: contactNumber,
       reportingTime: reportingTime,
       requiredCount: requiredCount,
+      requiredCongCount: requiredCongCount,
+      requiredFolkCount: requiredFolkCount,
+      requiredEmpCount: requiredEmpCount,
       photoUrl: photoUrl,
       active: active
     };
@@ -204,7 +211,9 @@ function ensureServiceHeader(sheet) {
     "Contact Number",
     "Reporting Time",
     "Photo",
-    "No. of Required Volunteers",
+    "No. of Req Cong Volunteers",
+    "No. of Req FOLK Volunteers",
+    "No. of Req Emp Volunteers",
     "Active"
   ];
   ensureHeaders_(sheet, headers);
@@ -342,6 +351,9 @@ function buildHeaderMap(headerRow) {
     contactNumber: findHeaderIndex_(normalized, ["coordinator contact number", "contact number"]),
     reportingTime: findHeaderIndex_(normalized, ["reporting time"]),
     requiredCount: findHeaderIndex_(normalized, ["required count", "number of volunteers required", "no of required volunteers"]),
+    requiredCongCount: findHeaderIndex_(normalized, ["no. of req cong volunteers", "req cong volunteers", "cong volunteers", "congregational volunteers"]),
+    requiredFolkCount: findHeaderIndex_(normalized, ["no. of req folk volunteers", "req folk volunteers", "folk volunteers"]),
+    requiredEmpCount: findHeaderIndex_(normalized, ["no. of req emp volunteers", "req emp volunteers", "emp volunteers"]),
     photoUrl: findHeaderIndex_(normalized, ["coordinator photo link", "photo url", "photo"]),
     active: findHeaderIndex_(normalized, ["active"])
   };

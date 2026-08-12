@@ -7,6 +7,7 @@ export default function PortalNav() {
       <Link href="/dashboard/registrations">Live Registrations</Link>
       <Link href="/dashboard/assigned-volunteers">Assigned Volunteers</Link>
       <Link href="/dashboard/service-wise">Service Wise View</Link>
+      <Link href="/dashboard/services-master">Services Master</Link>
       <Link href="/dashboard/assignment-status">Status of Assignment</Link>
     </nav>
   );
