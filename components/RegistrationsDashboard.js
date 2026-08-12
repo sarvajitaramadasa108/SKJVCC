@@ -145,8 +145,8 @@ export default function RegistrationsDashboard() {
     if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
     if (Array.isArray(cachedServices)) setServices(cachedServices);
 
-    async function loadRegistrations() {
-      setRefreshing(true);
+    async function loadRegistrations(silent = false) {
+      if (!silent) setRefreshing(true);
       try {
         const registrationsPayload = await fetchBridge("registrations.list");
         if (!alive) return;
@@ -155,12 +155,12 @@ export default function RegistrationsDashboard() {
         cacheJson("skjvcc_registrations_cache", next);
       } catch (error) {
         if (alive) {
-          if (!String(error?.message || "").toLowerCase().includes("timed out") || !registrations.length) {
+          if (!silent && (!String(error?.message || "").toLowerCase().includes("timed out") || !registrations.length)) {
             setMessage(error.message || "Could not load registrations");
           }
         }
       } finally {
-        if (alive) setRefreshing(false);
+        if (alive && !silent) setRefreshing(false);
       }
     }
 
@@ -176,11 +176,15 @@ export default function RegistrationsDashboard() {
       }
     }
 
-    loadRegistrations();
+    loadRegistrations(false);
     loadServices();
+    const timer = window.setInterval(() => {
+      loadRegistrations(true);
+    }, 15000);
 
     return () => {
       alive = false;
+      window.clearInterval(timer);
     };
   }, []);
 
@@ -446,9 +450,11 @@ export default function RegistrationsDashboard() {
     try {
       const registrationsPayload = await fetchBridge("registrations.list");
       setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
+      cacheJson("skjvcc_registrations_cache", Array.isArray(registrationsPayload) ? registrationsPayload : []);
       fetchBridge("services.list")
         .then((servicesPayload) => {
           setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
+          cacheJson("skjvcc_services_cache", Array.isArray(servicesPayload) ? servicesPayload : []);
       })
         .catch(() => setServices([]));
       setMessage("Data refreshed");
