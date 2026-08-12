@@ -13,6 +13,31 @@ export function normalizeText(value) {
     .replace(/[-–—]/g, "-");
 }
 
+export function normalizeExactText(value) {
+  return String(value || "").trim();
+}
+
+export function dedupeRegistrations(rows) {
+  const seen = new Set();
+  const deduped = [];
+
+  for (const row of Array.isArray(rows) ? rows : []) {
+    const fullName = normalizeExactText(row?.fullName);
+    const mobileNumber = normalizeExactText(row?.mobileNumber);
+    if (!fullName && !mobileNumber) {
+      deduped.push(row);
+      continue;
+    }
+
+    const key = `${fullName}||${mobileNumber}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(row);
+  }
+
+  return deduped;
+}
+
 export function availabilityFlags(value) {
   const normalized = normalizeText(value);
   return AVAILABILITY_COLUMNS.map((column) => ({
@@ -114,3 +139,4 @@ export function buildExcelDownload(filename, headers, rows) {
   link.click();
   URL.revokeObjectURL(link.href);
 }
+

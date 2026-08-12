@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, dedupeRegistrations, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -31,7 +31,7 @@ export default function ServiceWiseDashboard() {
       }
       const cachedRows = readCachedRows();
       if (cachedRows.length) {
-        setRegistrations(cachedRows);
+        setRegistrations(dedupeRegistrations(cachedRows));
       }
 
       try {
@@ -41,7 +41,7 @@ export default function ServiceWiseDashboard() {
         ]);
         if (!alive) return;
         const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
-        const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+        const nextRegistrations = dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
         setServices(nextServices);
         setRegistrations(nextRegistrations);
         writeCachedServices(nextServices);

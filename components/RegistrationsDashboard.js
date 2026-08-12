@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildImageUrl, dedupeRegistrations, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -144,7 +144,7 @@ export default function RegistrationsDashboard() {
     let alive = true;
     const cachedRegistrations = readCachedJson("skjvcc_registrations_cache");
     const cachedServices = readCachedJson("skjvcc_services_cache");
-    if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
+    if (Array.isArray(cachedRegistrations)) setRegistrations(dedupeRegistrations(cachedRegistrations));
     if (Array.isArray(cachedServices)) setServices(cachedServices);
 
     async function loadRegistrations(silent = false) {
@@ -152,7 +152,7 @@ export default function RegistrationsDashboard() {
       try {
         const registrationsPayload = await fetchBridge("registrations.list");
         if (!alive) return;
-        const next = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+        const next = dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
         setRegistrations(next);
         cacheJson("skjvcc_registrations_cache", next);
       } catch (error) {
@@ -506,8 +506,9 @@ export default function RegistrationsDashboard() {
     setMessage("");
     try {
       const registrationsPayload = await fetchBridge("registrations.list");
-      setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
-      cacheJson("skjvcc_registrations_cache", Array.isArray(registrationsPayload) ? registrationsPayload : []);
+      const nextRegistrations = dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
+      setRegistrations(nextRegistrations);
+      cacheJson("skjvcc_registrations_cache", nextRegistrations);
       fetchBridge("services.list")
         .then((servicesPayload) => {
           setServices(Array.isArray(servicesPayload) ? servicesPayload : []);

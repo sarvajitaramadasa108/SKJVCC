@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import PortalNav from "@/components/PortalNav";
-import { readJsonResponse } from "@/components/registryUtils";
+import { dedupeRegistrations, readJsonResponse } from "@/components/registryUtils";
 
 const SERVICES_CACHE_KEY = "skjvcc_services_cache";
 const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
@@ -23,11 +23,11 @@ export default function AssignmentStatusDashboard() {
         const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
         if (cachedServices.length || cachedRegistrations.length) {
           setServices(cachedServices);
-          setRegistrations(cachedRegistrations);
+          setRegistrations(dedupeRegistrations(cachedRegistrations));
         }
 
         const nextServices = await fetchServicesFresh();
-        const nextRegistrations = await fetchRegistrationsFresh();
+        const nextRegistrations = dedupeRegistrations(await fetchRegistrationsFresh());
         if (!alive) return;
         setServices(nextServices);
         setRegistrations(nextRegistrations);
@@ -60,9 +60,9 @@ export default function AssignmentStatusDashboard() {
         fetchRegistrationsFresh()
       ]);
       setServices(nextServices);
-      setRegistrations(nextRegistrations);
+      setRegistrations(dedupeRegistrations(nextRegistrations));
       writeCachedJson(SERVICES_CACHE_KEY, nextServices);
-      writeCachedJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
+      writeCachedJson(REGISTRATIONS_CACHE_KEY, dedupeRegistrations(nextRegistrations));
       setMessage("Assignment status refreshed.");
     } catch (error) {
       setMessage(error.message || "Could not refresh assignment status");

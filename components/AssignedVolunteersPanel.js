@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildImageUrl, dedupeRegistrations, readJsonResponse } from "@/components/registryUtils";
 
 const REQUEST_TIMEOUT_MS = 120000;
 const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
@@ -28,7 +28,7 @@ export default function AssignedVolunteersPanel() {
     const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
     const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
 
-    if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
+    if (Array.isArray(cachedRegistrations)) setRegistrations(dedupeRegistrations(cachedRegistrations));
     if (Array.isArray(cachedServices)) setServices(cachedServices);
     if (Array.isArray(cachedRegistrations) || Array.isArray(cachedServices)) {
       setLoading(false);
@@ -41,9 +41,9 @@ export default function AssignedVolunteersPanel() {
           fetchBridge("services.list")
         ]);
         if (!alive) return;
-        setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
+        setRegistrations(dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []));
         setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
-        cacheJson(REGISTRATIONS_CACHE_KEY, Array.isArray(registrationsPayload) ? registrationsPayload : []);
+        cacheJson(REGISTRATIONS_CACHE_KEY, dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []));
         cacheJson(SERVICES_CACHE_KEY, Array.isArray(servicesPayload) ? servicesPayload : []);
       } catch (error) {
         if (alive) {
@@ -80,7 +80,7 @@ export default function AssignedVolunteersPanel() {
         fetchBridge("registrations.list"),
         fetchBridge("services.list")
       ]);
-      const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+      const nextRegistrations = dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
       const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
       setRegistrations(nextRegistrations);
       setServices(nextServices);
@@ -138,15 +138,17 @@ export default function AssignedVolunteersPanel() {
       });
       const updated = payload?.registration || null;
       if (updated) {
-        setRegistrations((current) =>
-          current.map((item) => (item.sourceRow === row.sourceRow ? updated : item))
+      setRegistrations((current) =>
+          dedupeRegistrations(current.map((item) => (item.sourceRow === row.sourceRow ? updated : item)))
         );
       } else {
         setRegistrations((current) =>
-          current.map((item) =>
-            item.sourceRow === row.sourceRow
-              ? { ...item, assignedService: serviceName, assignedCategory: category }
-              : item
+          dedupeRegistrations(
+            current.map((item) =>
+              item.sourceRow === row.sourceRow
+                ? { ...item, assignedService: serviceName, assignedCategory: category }
+                : item
+            )
           )
         );
       }
