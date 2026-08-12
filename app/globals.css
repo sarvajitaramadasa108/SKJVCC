@@ -781,24 +781,36 @@ button:disabled {
 
 .category-select {
   width: 100%;
-  min-height: 34px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  border-color: rgba(15, 118, 110, 0.24);
-  background: linear-gradient(180deg, rgba(242, 251, 250, 0.98), rgba(224, 244, 241, 0.96));
-  font-size: 12px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(15, 118, 110, 0.32);
+  background: linear-gradient(180deg, rgba(248, 255, 253, 0.99), rgba(224, 244, 241, 0.98));
+  font-size: 13px;
   font-weight: 700;
   color: #11443f;
-  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.06);
+  box-shadow: 0 10px 20px rgba(15, 118, 110, 0.08), inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .category-select:focus {
-  outline-color: rgba(15, 118, 110, 0.22);
+  outline: none;
+  border-color: rgba(15, 118, 110, 0.6);
+  box-shadow: 0 14px 26px rgba(15, 118, 110, 0.14), 0 0 0 3px rgba(15, 118, 110, 0.12);
+  transform: translateY(-1px);
 }
 
 .assigned-volunteers-table .service-cell strong,
 .live-registrations-table .service-cell strong {
   font-size: 13px;
+}
+
+.service-summary-strip {
+  margin-top: 8px;
+}
+
+.service-summary-strip strong {
+  font-size: 20px;
 }
 
 .live-registrations-table td:nth-child(11),

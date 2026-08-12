@@ -77,6 +77,16 @@ export default function ServiceWiseDashboard() {
     [services, selectedService]
   );
 
+  const serviceStats = useMemo(() => {
+    const required = Number(selectedMeta?.requiredCount || 0);
+    const allocated = rows.length;
+    return {
+      required,
+      allocated,
+      remaining: Math.max(required - allocated, 0)
+    };
+  }, [selectedMeta, rows.length]);
+
   function downloadExcel() {
     const headers = [
       "Full Name",
@@ -148,11 +158,27 @@ export default function ServiceWiseDashboard() {
         </div>
 
         {selectedMeta ? (
-          <div className="service-meta">
+          <div className="stack">
+            <div className="service-meta">
             <div><span>Coordinator</span><strong>{selectedMeta.coordinatorName || "-"}</strong></div>
             <div><span>Contact</span><strong>{selectedMeta.contactNumber || "-"}</strong></div>
             <div><span>Reporting time</span><strong>{selectedMeta.reportingTime || "-"}</strong></div>
             <div><span>Required</span><strong>{selectedMeta.requiredCount || 0}</strong></div>
+            </div>
+            <div className="summary-strip service-summary-strip">
+              <div>
+                <span>Required</span>
+                <strong>{serviceStats.required}</strong>
+              </div>
+              <div>
+                <span>Allocated</span>
+                <strong>{serviceStats.allocated}</strong>
+              </div>
+              <div>
+                <span>Remaining</span>
+                <strong>{serviceStats.remaining}</strong>
+              </div>
+            </div>
           </div>
         ) : null}
       </section>
