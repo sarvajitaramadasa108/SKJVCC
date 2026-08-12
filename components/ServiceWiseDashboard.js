@@ -7,7 +7,7 @@ import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
 const SERVICES_CACHE_KEY = "skjvcc_services_cache";
-const SERVICE_ROWS_CACHE_PREFIX = "skjvcc_service_rows_cache_";
+const SERVICE_ROWS_CACHE_KEY = "skjvcc_service_rows_cache";
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
@@ -15,33 +15,45 @@ function emptyImage() {
 
 export default function ServiceWiseDashboard() {
   const [services, setServices] = useState([]);
+  const [registrations, setRegistrations] = useState([]);
   const [selectedService, setSelectedService] = useState("");
-  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState(false);
   const [message, setMessage] = useState("");
   const [viewer, setViewer] = useState(emptyImage());
 
   useEffect(() => {
     let alive = true;
 
-    async function loadServices() {
+    async function loadData() {
       const cachedServices = readCachedServices();
       if (cachedServices.length) {
         setServices(cachedServices);
-        setLoading(false);
       }
+      const cachedRows = readCachedRows();
+      if (cachedRows.length) {
+        setRegistrations(cachedRows);
+      }
+
       try {
-        const payload = await fetchBridge("services.list");
+        const [servicesPayload, registrationsPayload] = await Promise.all([
+          fetchBridge("services.list"),
+          fetchBridge("registrations.list")
+        ]);
         if (!alive) return;
-        const nextServices = Array.isArray(payload) ? payload : [];
+        const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
+        const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
         setServices(nextServices);
+        setRegistrations(nextRegistrations);
         writeCachedServices(nextServices);
+        writeCachedRows(nextRegistrations);
       } catch (error) {
         if (alive) {
           if (!cachedServices.length) {
             setServices([]);
             setMessage(error.message || "Could not load services");
+          }
+          if (!cachedRows.length) {
+            setRegistrations([]);
           }
         }
       } finally {
@@ -49,52 +61,16 @@ export default function ServiceWiseDashboard() {
       }
     }
 
-    loadServices();
+    loadData();
     return () => {
       alive = false;
     };
   }, []);
 
-  useEffect(() => {
-    if (!selectedService) {
-      setRows([]);
-      return;
-    }
-
-    let alive = true;
-    const cachedRows = readCachedRows(selectedService);
-    if (cachedRows.length) {
-      setRows(cachedRows);
-      setLoading(false);
-    }
-
-    async function loadRows() {
-      try {
-        setWorking(true);
-        const payload = await fetchBridge("registrations.byService", { serviceName: selectedService });
-        if (!alive) return;
-        const nextRows = Array.isArray(payload) ? payload : [];
-        setRows(nextRows);
-        writeCachedRows(selectedService, nextRows);
-      } catch (error) {
-        if (alive) {
-          if (!cachedRows.length) {
-            setRows([]);
-            const message = String(error?.message || "");
-            setMessage(message && !message.toLowerCase().includes("timed out") ? message : "Could not load service volunteers");
-          }
-        }
-      } finally {
-        if (alive) setWorking(false);
-      }
-    }
-
-    loadRows();
-
-    return () => {
-      alive = false;
-    };
-  }, [selectedService]);
+  const rows = useMemo(() => {
+    if (!selectedService) return [];
+    return registrations.filter((row) => String(row.assignedService || "").trim() === selectedService);
+  }, [registrations, selectedService]);
 
   const selectedMeta = useMemo(
     () => services.find((service) => service.serviceName === selectedService) || null,
@@ -165,7 +141,7 @@ export default function ServiceWiseDashboard() {
             </select>
           </label>
           <div className="actions">
-            <button type="button" onClick={downloadExcel} disabled={!rows.length || working || !selectedService}>
+            <button type="button" onClick={downloadExcel} disabled={!rows.length || !selectedService}>
               Download as Excel
             </button>
           </div>
@@ -195,7 +171,6 @@ export default function ServiceWiseDashboard() {
           <div className="empty-state">Choose a service to load the assigned volunteers.</div>
         ) : rows.length ? (
           <div className="stack">
-            {working ? <div className="inline-notice notice">Refreshing service volunteers...</div> : null}
             <div className="table-wrap">
               <table className="data-table service-wise-table">
                 <thead>
@@ -242,7 +217,7 @@ export default function ServiceWiseDashboard() {
               </table>
             </div>
           </div>
-        ) : loading || working ? (
+        ) : loading ? (
           <div className="empty-state">Loading service volunteers...</div>
         ) : (
           <div className="empty-state">No volunteers are assigned to this service yet.</div>
@@ -327,14 +302,10 @@ function writeCachedServices(services) {
   }
 }
 
-function serviceRowsCacheKey(serviceName) {
-  return `${SERVICE_ROWS_CACHE_PREFIX}${String(serviceName || "").trim().toLowerCase()}`;
-}
-
-function readCachedRows(serviceName) {
-  if (typeof window === "undefined" || !serviceName) return [];
+function readCachedRows() {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(serviceRowsCacheKey(serviceName));
+    const raw = window.localStorage.getItem(SERVICE_ROWS_CACHE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -343,10 +314,9 @@ function readCachedRows(serviceName) {
   }
 }
 
-function writeCachedRows(serviceName, rows) {
-  if (!serviceName) return;
+function writeCachedRows(rows) {
   try {
-    window.localStorage.setItem(serviceRowsCacheKey(serviceName), JSON.stringify(Array.isArray(rows) ? rows : []));
+    window.localStorage.setItem(SERVICE_ROWS_CACHE_KEY, JSON.stringify(Array.isArray(rows) ? rows : []));
   } catch {
     // Ignore cache failures.
   }
