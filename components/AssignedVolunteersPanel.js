@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 120000;
 const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
 const SERVICES_CACHE_KEY = "skjvcc_services_cache";
 
@@ -192,10 +192,9 @@ export default function AssignedVolunteersPanel() {
         <div className="empty-state">Loading assigned volunteers...</div>
       ) : assignedRegistrations.length ? (
         <div className="table-wrap">
-          <table className="data-table">
+          <table className="data-table assigned-volunteers-table">
             <thead>
               <tr>
-                <th>S No</th>
                 <th>Full Name</th>
                 <th>Age</th>
                 <th>Mobile Number</th>
@@ -216,7 +215,6 @@ export default function AssignedVolunteersPanel() {
                 const draft = assignmentDrafts[row.sourceRow] || {};
                 return (
                   <tr key={row.sourceRow}>
-                    <td>{row.serialNo || row.sourceRow || "-"}</td>
                     <td>{row.fullName || "-"}</td>
                     <td>{row.age || "-"}</td>
                     <td>{row.mobileNumber || "-"}</td>
@@ -336,10 +334,11 @@ export default function AssignedVolunteersPanel() {
                             </button>
                           </>
                         ) : (
-                          <select
-                            value={draft.category || row.assignedCategory || ""}
-                            onChange={(event) => handleAssignCategory(row, event.target.value)}
-                            disabled={savingRow === row.sourceRow}
+                            <select
+                              className="category-select"
+                              value={draft.category || row.assignedCategory || ""}
+                              onChange={(event) => handleAssignCategory(row, event.target.value)}
+                              disabled={savingRow === row.sourceRow}
                           >
                             <option value="">Select category</option>
                             {categoryOptions.map((category) => (
@@ -408,7 +407,7 @@ async function fetchBridge(action, payload = {}) {
     return data.data;
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Request timed out. Please try again.");
+      throw new Error("Could not load data right now. Please try again.");
     }
     throw error;
   } finally {

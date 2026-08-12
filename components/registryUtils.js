@@ -73,7 +73,11 @@ export async function readJsonResponse(response) {
   try {
     return JSON.parse(text);
   } catch {
-    throw new Error(text?.startsWith("<!DOCTYPE") ? "Backend returned HTML instead of JSON" : text || "Backend returned an invalid response");
+    const trimmed = String(text || "").trim();
+    if (/^<!doctype/i.test(trimmed) || /^<html/i.test(trimmed)) {
+      throw new Error("Unexpected response from the server. Please try again.");
+    }
+    throw new Error(trimmed || "Unexpected response from the server. Please try again.");
   }
 }
 

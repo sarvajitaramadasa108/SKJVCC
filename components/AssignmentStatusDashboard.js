@@ -144,10 +144,9 @@ export default function AssignmentStatusDashboard() {
           <div className="empty-state">Loading assignment status...</div>
         ) : rows.length ? (
           <div className="table-wrap assignment-table-wrap">
-            <table className="summary-table assignment-table">
+            <table className="summary-table assignment-table status-table">
               <thead>
                 <tr>
-                  <th>S No</th>
                   <th>Service Name</th>
                   <th>Req FOLK</th>
                   <th>Alloc FOLK</th>
@@ -163,7 +162,6 @@ export default function AssignmentStatusDashboard() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td>{row.serialNo}</td>
                     <td><strong>{row.serviceName}</strong></td>
                     <td>{row.required.FOLK}</td>
                     <td>{row.allocated.FOLK}</td>

@@ -130,7 +130,6 @@ export default function ServiceMasterDashboard() {
             <table className="summary-table assignment-table service-master-table">
               <thead>
                 <tr>
-                  <th>S No</th>
                   <th>Service Name</th>
                   <th>Service Coordinator</th>
                   <th>Contact Number</th>
@@ -144,7 +143,6 @@ export default function ServiceMasterDashboard() {
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td>{row.serialNo}</td>
                     <td><strong>{row.serviceName}</strong></td>
                     <td>{row.coordinatorName}</td>
                     <td>{row.contactNumber}</td>

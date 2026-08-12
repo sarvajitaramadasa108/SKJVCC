@@ -6,7 +6,7 @@ import { createPortal } from "react-dom";
 import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
-const REQUEST_TIMEOUT_MS = 30000;
+const REQUEST_TIMEOUT_MS = 120000;
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
@@ -157,8 +157,9 @@ export default function RegistrationsDashboard() {
         cacheJson("skjvcc_registrations_cache", next);
       } catch (error) {
         if (alive) {
-          if (!silent && (!String(error?.message || "").toLowerCase().includes("timed out") || !registrations.length)) {
-            setMessage(error.message || "Could not load registrations");
+          const message = String(error?.message || "");
+          if (!silent && (!message.toLowerCase().includes("timed out") || !registrations.length)) {
+            setMessage(message && !message.toLowerCase().includes("timed out") ? message : "Could not load registrations");
           }
         }
       } finally {
@@ -362,10 +363,9 @@ export default function RegistrationsDashboard() {
 
         {liveRegistrations.length ? (
           <div className="table-wrap">
-            <table className="data-table">
+              <table className="data-table live-registrations-table">
               <thead>
                 <tr>
-                  <th>S No</th>
                   <th>Full Name</th>
                   <th>Age</th>
                   <th>Mobile Number</th>
@@ -386,7 +386,6 @@ export default function RegistrationsDashboard() {
                   const draft = assignmentDrafts[row.sourceRow] || {};
                   return (
                     <tr key={row.sourceRow}>
-                      <td>{row.serialNo || row.sourceRow || "-"}</td>
                       <td>{row.fullName || "-"}</td>
                       <td>{row.age || "-"}</td>
                       <td>{row.mobileNumber || "-"}</td>
@@ -444,6 +443,7 @@ export default function RegistrationsDashboard() {
                             </div>
                           ) : (
                             <select
+                              className="category-select"
                               value={draft.category || row.assignedCategory || ""}
                               onChange={(event) => handleAssignCategory(row, event.target.value)}
                               disabled={savingRow === row.sourceRow}
@@ -516,8 +516,9 @@ export default function RegistrationsDashboard() {
         .catch(() => setServices([]));
       setMessage("Data refreshed");
     } catch (error) {
-      if (!String(error?.message || "").toLowerCase().includes("timed out") || !registrations.length) {
-        setMessage(error.message || "Could not refresh data");
+      const message = String(error?.message || "");
+      if (!message.toLowerCase().includes("timed out") || !registrations.length) {
+        setMessage(message && !message.toLowerCase().includes("timed out") ? message : "Could not refresh data");
       }
     } finally {
       setRefreshing(false);
@@ -539,7 +540,7 @@ async function fetchBridge(action, payload = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Request timed out. Showing cached data when available.");
+      throw new Error("Could not load data right now. Please try again.");
     }
     throw error;
   } finally {

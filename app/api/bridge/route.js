@@ -1,6 +1,7 @@
 const APPS_SCRIPT_URL =
   process.env.GOOGLE_APPS_SCRIPT_URL ||
   "https://script.google.com/macros/s/AKfycbwG8SYratBMCagMfokDFOtqEawb1dTc8u61GRHjHCGErCKc6JFbPfAz-r8jypFJ45ukSg/exec";
+const UNEXPECTED_RESPONSE_MESSAGE = "Unexpected response from Apps Script. Please try again.";
 
 async function forwardToAppsScript(request) {
   if (!APPS_SCRIPT_URL) {
@@ -42,7 +43,12 @@ async function forwardToAppsScript(request) {
   try {
     payload = JSON.parse(rawText);
   } catch {
-    payload = { ok: false, error: rawText || "Apps Script returned an invalid response" };
+    const trimmed = String(rawText || "").trim();
+    const looksLikeHtml = /^<!doctype/i.test(trimmed) || /^<html/i.test(trimmed);
+    payload = {
+      ok: false,
+      error: looksLikeHtml ? UNEXPECTED_RESPONSE_MESSAGE : trimmed || UNEXPECTED_RESPONSE_MESSAGE
+    };
   }
 
   const status = payload && payload.ok === false ? 500 : upstreamResponse.ok ? 200 : upstreamResponse.status;

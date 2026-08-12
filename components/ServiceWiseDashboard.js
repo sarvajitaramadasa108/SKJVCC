@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
-const REQUEST_TIMEOUT_MS = 20000;
+const REQUEST_TIMEOUT_MS = 120000;
 const SERVICES_CACHE_KEY = "skjvcc_services_cache";
 const SERVICE_ROWS_CACHE_PREFIX = "skjvcc_service_rows_cache_";
 
@@ -80,9 +80,8 @@ export default function ServiceWiseDashboard() {
         if (alive) {
           if (!cachedRows.length) {
             setRows([]);
-            setMessage(error.message || "Could not load service volunteers");
-          } else {
-            setMessage(`Showing cached volunteers for ${selectedService}. Refresh timed out.`);
+            const message = String(error?.message || "");
+            setMessage(message && !message.toLowerCase().includes("timed out") ? message : "Could not load service volunteers");
           }
         }
       } finally {
@@ -104,7 +103,6 @@ export default function ServiceWiseDashboard() {
 
   function downloadExcel() {
     const headers = [
-      "S No",
       "Full Name",
       "Age",
       "Category",
@@ -115,7 +113,6 @@ export default function ServiceWiseDashboard() {
       "Assigned Service"
     ];
     const excelRows = rows.map((row, index) => [
-      index + 1,
       row.fullName || "",
       row.age || "",
       row.assignedCategory || "",
@@ -200,10 +197,9 @@ export default function ServiceWiseDashboard() {
           <div className="stack">
             {working ? <div className="inline-notice notice">Refreshing service volunteers...</div> : null}
             <div className="table-wrap">
-              <table className="data-table">
+              <table className="data-table service-wise-table">
                 <thead>
                 <tr>
-                  <th>S No</th>
                   <th>Full Name</th>
                   <th>Mobile Number</th>
                   <th>Age</th>
@@ -218,7 +214,6 @@ export default function ServiceWiseDashboard() {
                 <tbody>
                   {rows.map((row, index) => (
                   <tr key={row.sourceRow || `${row.mobileNumber}-${index}`}>
-                    <td>{index + 1}</td>
                     <td>{row.fullName || "-"}</td>
                     <td>{row.mobileNumber || "-"}</td>
                     <td>{row.age || "-"}</td>
@@ -299,7 +294,7 @@ async function fetchBridge(action, payload = {}) {
     });
   } catch (error) {
     if (error.name === "AbortError") {
-      throw new Error("Request timed out. Please try again.");
+      throw new Error("Could not load data right now. Please try again.");
     }
     throw error;
   } finally {

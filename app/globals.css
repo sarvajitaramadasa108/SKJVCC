@@ -205,10 +205,10 @@ h2 {
 .table-panel {
   display: flex;
   flex-direction: column;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   min-height: 0;
   height: auto;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .assignment-status-panel {
@@ -357,7 +357,7 @@ button:disabled {
 }
 
 .table-wrap {
-  overflow: visible;
+  overflow: auto;
   border-radius: 18px;
   border: 1px solid rgba(112, 76, 36, 0.12);
   min-height: 0;
@@ -509,6 +509,169 @@ button:disabled {
   background: rgba(255, 250, 243, 0.88);
 }
 
+.live-registrations-table,
+.assigned-volunteers-table,
+.service-wise-table,
+.status-table,
+.service-master-table {
+  table-layout: fixed;
+  width: 100%;
+  min-width: 0;
+}
+
+.live-registrations-table th,
+.live-registrations-table td,
+.assigned-volunteers-table th,
+.assigned-volunteers-table td,
+.service-wise-table th,
+.service-wise-table td,
+.status-table th,
+.status-table td,
+.service-master-table th,
+.service-master-table td {
+  font-size: 12px;
+  line-height: 1.28;
+}
+
+.live-registrations-table th:nth-child(1),
+.live-registrations-table td:nth-child(1),
+.assigned-volunteers-table th:nth-child(1),
+.assigned-volunteers-table td:nth-child(1) {
+  width: 12%;
+}
+
+.live-registrations-table th:nth-child(2),
+.live-registrations-table td:nth-child(2),
+.assigned-volunteers-table th:nth-child(2),
+.assigned-volunteers-table td:nth-child(2),
+.service-wise-table th:nth-child(3),
+.service-wise-table td:nth-child(3) {
+  width: 5%;
+}
+
+.live-registrations-table th:nth-child(3),
+.live-registrations-table td:nth-child(3),
+.assigned-volunteers-table th:nth-child(3),
+.assigned-volunteers-table td:nth-child(3),
+.service-wise-table th:nth-child(2),
+.service-wise-table td:nth-child(2) {
+  width: 10%;
+}
+
+.live-registrations-table th:nth-child(4),
+.live-registrations-table td:nth-child(4),
+.assigned-volunteers-table th:nth-child(4),
+.assigned-volunteers-table td:nth-child(4),
+.service-wise-table th:nth-child(4),
+.service-wise-table td:nth-child(4) {
+  width: 12%;
+}
+
+.live-registrations-table th:nth-child(5),
+.live-registrations-table td:nth-child(5),
+.assigned-volunteers-table th:nth-child(5),
+.assigned-volunteers-table td:nth-child(5),
+.service-wise-table th:nth-child(5),
+.service-wise-table td:nth-child(5) {
+  width: 13%;
+}
+
+.live-registrations-table th:nth-child(6),
+.live-registrations-table td:nth-child(6),
+.assigned-volunteers-table th:nth-child(6),
+.assigned-volunteers-table td:nth-child(6),
+.service-wise-table th:nth-child(6),
+.service-wise-table td:nth-child(6),
+.status-table th:nth-child(2),
+.status-table td:nth-child(2),
+.service-master-table th:nth-child(2),
+.service-master-table td:nth-child(2) {
+  width: 8%;
+}
+
+.live-registrations-table th:nth-child(7),
+.live-registrations-table td:nth-child(7),
+.assigned-volunteers-table th:nth-child(7),
+.assigned-volunteers-table td:nth-child(7),
+.service-wise-table th:nth-child(7),
+.service-wise-table td:nth-child(7),
+.status-table th:nth-child(3),
+.status-table td:nth-child(3),
+.status-table th:nth-child(4),
+.status-table td:nth-child(4),
+.status-table th:nth-child(5),
+.status-table td:nth-child(5),
+.service-master-table th:nth-child(7),
+.service-master-table td:nth-child(7),
+.service-master-table th:nth-child(8),
+.service-master-table td:nth-child(8),
+.service-master-table th:nth-child(9),
+.service-master-table td:nth-child(9) {
+  width: 8%;
+}
+
+.live-registrations-table th:nth-child(8),
+.live-registrations-table td:nth-child(8),
+.assigned-volunteers-table th:nth-child(8),
+.assigned-volunteers-table td:nth-child(8),
+.service-wise-table th:nth-child(8),
+.service-wise-table td:nth-child(8),
+.status-table th:nth-child(6),
+.status-table td:nth-child(6),
+.status-table th:nth-child(7),
+.status-table td:nth-child(7),
+.status-table th:nth-child(8),
+.status-table td:nth-child(8),
+.status-table th:nth-child(9),
+.status-table td:nth-child(9),
+.service-master-table th:nth-child(3),
+.service-master-table td:nth-child(3) {
+  width: 10%;
+}
+
+.live-registrations-table th:nth-child(9),
+.live-registrations-table td:nth-child(9),
+.assigned-volunteers-table th:nth-child(9),
+.assigned-volunteers-table td:nth-child(9),
+.service-wise-table th:nth-child(9),
+.service-wise-table td:nth-child(9),
+.service-master-table th:nth-child(4),
+.service-master-table td:nth-child(4) {
+  width: 7%;
+}
+
+.live-registrations-table th:nth-child(10),
+.live-registrations-table td:nth-child(10),
+.assigned-volunteers-table th:nth-child(10),
+.assigned-volunteers-table td:nth-child(10),
+.service-wise-table th:nth-child(10),
+.service-wise-table td:nth-child(10),
+.service-master-table th:nth-child(5),
+.service-master-table td:nth-child(5) {
+  width: 9%;
+}
+
+.live-registrations-table th:nth-child(11),
+.live-registrations-table td:nth-child(11),
+.assigned-volunteers-table th:nth-child(11),
+.assigned-volunteers-table td:nth-child(11) {
+  width: 14%;
+}
+
+.live-registrations-table th:nth-child(12),
+.live-registrations-table td:nth-child(12),
+.assigned-volunteers-table th:nth-child(12),
+.assigned-volunteers-table td:nth-child(12) {
+  width: 14%;
+}
+
+.live-registrations-table th:nth-child(13),
+.live-registrations-table td:nth-child(13),
+.assigned-volunteers-table th:nth-child(13),
+.assigned-volunteers-table td:nth-child(13) {
+  width: 8%;
+}
+
 .service-master-table th,
 .service-master-table td {
   font-size: 12px;
@@ -563,6 +726,14 @@ button:disabled {
   white-space: normal;
 }
 
+.service-wise-table td:nth-child(1) strong,
+.service-master-table td:nth-child(1) strong,
+.status-table td:nth-child(1) strong {
+  display: block;
+  font-size: 12px;
+  white-space: normal;
+}
+
 .badge {
   display: inline-flex;
   align-items: center;
@@ -587,6 +758,8 @@ button:disabled {
   display: grid;
   gap: 6px;
   min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .service-cell strong {
@@ -604,6 +777,255 @@ button:disabled {
   min-height: 28px;
   padding: 4px 8px;
   font-size: 10px;
+}
+
+.category-select {
+  width: 100%;
+  min-height: 34px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  border-color: rgba(15, 118, 110, 0.24);
+  background: linear-gradient(180deg, rgba(242, 251, 250, 0.98), rgba(224, 244, 241, 0.96));
+  font-size: 12px;
+  font-weight: 700;
+  color: #11443f;
+  box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.06);
+}
+
+.category-select:focus {
+  outline-color: rgba(15, 118, 110, 0.22);
+}
+
+.assigned-volunteers-table .service-cell strong,
+.live-registrations-table .service-cell strong {
+  font-size: 13px;
+}
+
+.live-registrations-table td:nth-child(11),
+.assigned-volunteers-table td:nth-child(11),
+.live-registrations-table td:nth-child(12),
+.assigned-volunteers-table td:nth-child(12) {
+  min-width: 140px;
+}
+
+.live-registrations-table td:nth-child(11),
+.assigned-volunteers-table td:nth-child(11) {
+  padding-right: 10px;
+}
+
+.live-registrations-table td:nth-child(12),
+.assigned-volunteers-table td:nth-child(12) {
+  padding-left: 10px;
+}
+
+.service-wise-table th:nth-child(1),
+.service-wise-table td:nth-child(1) {
+  width: 16%;
+}
+
+.service-wise-table th:nth-child(2),
+.service-wise-table td:nth-child(2) {
+  width: 14%;
+}
+
+.service-wise-table th:nth-child(3),
+.service-wise-table td:nth-child(3) {
+  width: 7%;
+}
+
+.service-wise-table th:nth-child(4),
+.service-wise-table td:nth-child(4) {
+  width: 11%;
+}
+
+.service-wise-table th:nth-child(5),
+.service-wise-table td:nth-child(5) {
+  width: 14%;
+}
+
+.service-wise-table th:nth-child(6),
+.service-wise-table td:nth-child(6),
+.service-wise-table th:nth-child(7),
+.service-wise-table td:nth-child(7),
+.service-wise-table th:nth-child(8),
+.service-wise-table td:nth-child(8),
+.service-wise-table th:nth-child(9),
+.service-wise-table td:nth-child(9) {
+  width: 7.25%;
+}
+
+.service-wise-table th:nth-child(10),
+.service-wise-table td:nth-child(10) {
+  width: 7%;
+}
+
+.status-table th:nth-child(1),
+.status-table td:nth-child(1) {
+  width: 25%;
+}
+
+.status-table th:nth-child(2),
+.status-table td:nth-child(2),
+.status-table th:nth-child(3),
+.status-table td:nth-child(3),
+.status-table th:nth-child(4),
+.status-table td:nth-child(4),
+.status-table th:nth-child(5),
+.status-table td:nth-child(5),
+.status-table th:nth-child(6),
+.status-table td:nth-child(6),
+.status-table th:nth-child(7),
+.status-table td:nth-child(7),
+.status-table th:nth-child(8),
+.status-table td:nth-child(8),
+.status-table th:nth-child(9),
+.status-table td:nth-child(9),
+.status-table th:nth-child(10),
+.status-table td:nth-child(10) {
+  width: 8.33%;
+}
+
+.service-master-table th:nth-child(1),
+.service-master-table td:nth-child(1) {
+  width: 22%;
+}
+
+.service-master-table th:nth-child(2),
+.service-master-table td:nth-child(2) {
+  width: 17%;
+}
+
+.service-master-table th:nth-child(3),
+.service-master-table td:nth-child(3) {
+  width: 11%;
+}
+
+.service-master-table th:nth-child(4),
+.service-master-table td:nth-child(4) {
+  width: 11%;
+}
+
+.service-master-table th:nth-child(5),
+.service-master-table td:nth-child(5) {
+  width: 9%;
+}
+
+.service-master-table th:nth-child(6),
+.service-master-table td:nth-child(6) {
+  width: 8%;
+}
+
+.service-master-table th:nth-child(7),
+.service-master-table td:nth-child(7),
+.service-master-table th:nth-child(8),
+.service-master-table td:nth-child(8),
+.service-master-table th:nth-child(9),
+.service-master-table td:nth-child(9) {
+  width: 10.33%;
+}
+
+.service-wise-table th:nth-child(1),
+.service-wise-table td:nth-child(1) {
+  width: 14%;
+}
+
+.service-wise-table th:nth-child(2),
+.service-wise-table td:nth-child(2) {
+  width: 12%;
+}
+
+.service-wise-table th:nth-child(3),
+.service-wise-table td:nth-child(3) {
+  width: 6%;
+}
+
+.service-wise-table th:nth-child(4),
+.service-wise-table td:nth-child(4) {
+  width: 10%;
+}
+
+.service-wise-table th:nth-child(5),
+.service-wise-table td:nth-child(5) {
+  width: 14%;
+}
+
+.service-wise-table th:nth-child(6),
+.service-wise-table td:nth-child(6),
+.service-wise-table th:nth-child(7),
+.service-wise-table td:nth-child(7),
+.service-wise-table th:nth-child(8),
+.service-wise-table td:nth-child(8),
+.service-wise-table th:nth-child(9),
+.service-wise-table td:nth-child(9) {
+  width: 8.5%;
+}
+
+.service-wise-table th:nth-child(10),
+.service-wise-table td:nth-child(10) {
+  width: 8%;
+}
+
+.status-table th:nth-child(1),
+.status-table td:nth-child(1) {
+  width: 28%;
+}
+
+.status-table th:nth-child(2),
+.status-table td:nth-child(2),
+.status-table th:nth-child(3),
+.status-table td:nth-child(3),
+.status-table th:nth-child(4),
+.status-table td:nth-child(4),
+.status-table th:nth-child(5),
+.status-table td:nth-child(5),
+.status-table th:nth-child(6),
+.status-table td:nth-child(6),
+.status-table th:nth-child(7),
+.status-table td:nth-child(7),
+.status-table th:nth-child(8),
+.status-table td:nth-child(8),
+.status-table th:nth-child(9),
+.status-table td:nth-child(9),
+.status-table th:nth-child(10),
+.status-table td:nth-child(10) {
+  width: 8%;
+}
+
+.service-master-table th:nth-child(1),
+.service-master-table td:nth-child(1) {
+  width: 22%;
+}
+
+.service-master-table th:nth-child(2),
+.service-master-table td:nth-child(2) {
+  width: 16%;
+}
+
+.service-master-table th:nth-child(3),
+.service-master-table td:nth-child(3) {
+  width: 10%;
+}
+
+.service-master-table th:nth-child(4),
+.service-master-table td:nth-child(4) {
+  width: 11%;
+}
+
+.service-master-table th:nth-child(5),
+.service-master-table td:nth-child(5) {
+  width: 8%;
+}
+
+.service-master-table th:nth-child(6),
+.service-master-table td:nth-child(6) {
+  width: 8%;
+}
+
+.service-master-table th:nth-child(7),
+.service-master-table td:nth-child(7),
+.service-master-table th:nth-child(8),
+.service-master-table td:nth-child(8) {
+  width: 12.5%;
 }
 
 .service-dropdown-wrap {
