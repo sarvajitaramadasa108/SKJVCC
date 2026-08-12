@@ -147,31 +147,36 @@ export default function AssignmentStatusDashboard() {
             <table className="summary-table assignment-table status-table">
               <thead>
                 <tr>
-                  <th>Service Name</th>
-                  <th>Req FOLK</th>
-                  <th>Alloc FOLK</th>
-                  <th>Pending FOLK</th>
-                  <th>Req Congregation</th>
-                  <th>Alloc Congregation</th>
-                  <th>Pending Congregation</th>
-                  <th>Req Employee</th>
-                  <th>Alloc Employee</th>
-                  <th>Pending Employee</th>
+                  <th rowSpan="2" className="status-service-head">Service Name</th>
+                  <th colSpan="3" className="status-group status-group-folk">FOLK</th>
+                  <th colSpan="3" className="status-group status-group-congregation">Congregation</th>
+                  <th colSpan="3" className="status-group status-group-employee">Employee</th>
+                </tr>
+                <tr>
+                  <th className="status-subhead status-subhead-folk">Required</th>
+                  <th className="status-subhead status-subhead-folk">Allocated</th>
+                  <th className="status-subhead status-subhead-folk">Remaining</th>
+                  <th className="status-subhead status-subhead-congregation">Required</th>
+                  <th className="status-subhead status-subhead-congregation">Allocated</th>
+                  <th className="status-subhead status-subhead-congregation">Remaining</th>
+                  <th className="status-subhead status-subhead-employee">Required</th>
+                  <th className="status-subhead status-subhead-employee">Allocated</th>
+                  <th className="status-subhead status-subhead-employee">Remaining</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td><strong>{row.serviceName}</strong></td>
-                    <td>{row.required.FOLK}</td>
-                    <td>{row.allocated.FOLK}</td>
-                    <td><strong>{row.pending.FOLK}</strong></td>
-                    <td>{row.required.Congregation}</td>
-                    <td>{row.allocated.Congregation}</td>
-                    <td><strong>{row.pending.Congregation}</strong></td>
-                    <td>{row.required.Employee}</td>
-                    <td>{row.allocated.Employee}</td>
-                    <td><strong>{row.pending.Employee}</strong></td>
+                    <td className="status-service-cell"><strong>{row.serviceName}</strong></td>
+                    <td className="status-cell status-cell-folk">{row.required.FOLK}</td>
+                    <td className="status-cell status-cell-folk">{row.allocated.FOLK}</td>
+                    <td className="status-cell status-cell-folk"><strong>{row.pending.FOLK}</strong></td>
+                    <td className="status-cell status-cell-congregation">{row.required.Congregation}</td>
+                    <td className="status-cell status-cell-congregation">{row.allocated.Congregation}</td>
+                    <td className="status-cell status-cell-congregation"><strong>{row.pending.Congregation}</strong></td>
+                    <td className="status-cell status-cell-employee">{row.required.Employee}</td>
+                    <td className="status-cell status-cell-employee">{row.allocated.Employee}</td>
+                    <td className="status-cell status-cell-employee"><strong>{row.pending.Employee}</strong></td>
                   </tr>
                 ))}
               </tbody>

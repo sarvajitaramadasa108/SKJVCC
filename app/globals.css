@@ -914,6 +914,113 @@ button:disabled {
   width: 8.33%;
 }
 
+.status-table thead tr:first-child th {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.status-table thead tr:first-child th.status-service-head {
+  background: #f8ecd6;
+  color: #6b4f1d;
+  border-right: 2px solid rgba(107, 79, 29, 0.2);
+}
+
+.status-group {
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+  border-right: 2px solid rgba(255, 255, 255, 0.5);
+  text-align: center;
+  font-weight: 800;
+  font-size: 11px;
+}
+
+.status-group-folk {
+  background: linear-gradient(180deg, #fff4d6, #f8e5a8);
+  color: #8a5a00;
+}
+
+.status-group-congregation {
+  background: linear-gradient(180deg, #dff4ec, #bce6d9);
+  color: #0f6b57;
+}
+
+.status-group-employee {
+  background: linear-gradient(180deg, #dfe9ff, #bfd0ff);
+  color: #244c9b;
+}
+
+.status-subhead {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.status-subhead-folk {
+  background: rgba(248, 229, 168, 0.55);
+  border-bottom: 2px solid rgba(138, 90, 0, 0.14);
+}
+
+.status-subhead-congregation {
+  background: rgba(188, 230, 217, 0.55);
+  border-bottom: 2px solid rgba(15, 107, 87, 0.14);
+}
+
+.status-subhead-employee {
+  background: rgba(191, 208, 255, 0.55);
+  border-bottom: 2px solid rgba(36, 76, 155, 0.14);
+}
+
+.status-cell {
+  text-align: center;
+  font-weight: 700;
+}
+
+.status-cell strong {
+  font-size: 13px;
+}
+
+.status-cell-folk {
+  background: rgba(248, 229, 168, 0.15);
+  border-left: 1px solid rgba(138, 90, 0, 0.12);
+  border-right: 1px solid rgba(138, 90, 0, 0.12);
+}
+
+.status-cell-congregation {
+  background: rgba(188, 230, 217, 0.15);
+  border-left: 1px solid rgba(15, 107, 87, 0.12);
+  border-right: 1px solid rgba(15, 107, 87, 0.12);
+}
+
+.status-cell-employee {
+  background: rgba(191, 208, 255, 0.15);
+  border-left: 1px solid rgba(36, 76, 155, 0.12);
+  border-right: 1px solid rgba(36, 76, 155, 0.12);
+}
+
+.status-table tbody tr td.status-cell-folk:first-of-type,
+.status-table tbody tr td.status-cell-congregation:first-of-type,
+.status-table tbody tr td.status-cell-employee:first-of-type {
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.35);
+}
+
+.status-table tbody tr td.status-service-cell {
+  background: rgba(255, 248, 235, 0.92);
+  border-right: 2px solid rgba(112, 76, 36, 0.16);
+}
+
+.status-table thead tr:nth-child(2) th:first-child {
+  border-left: 2px solid rgba(138, 90, 0, 0.14);
+}
+
+.status-table thead tr:nth-child(2) th:nth-child(4) {
+  border-left: 2px solid rgba(15, 107, 87, 0.14);
+}
+
+.status-table thead tr:nth-child(2) th:nth-child(7) {
+  border-left: 2px solid rgba(36, 76, 155, 0.14);
+}
+
 .service-master-table th:nth-child(1),
 .service-master-table td:nth-child(1) {
   width: 22%;
