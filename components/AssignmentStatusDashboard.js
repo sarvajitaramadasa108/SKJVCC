@@ -153,15 +153,15 @@ export default function AssignmentStatusDashboard() {
                   <th colSpan="3" className="status-group status-group-employee">Employee</th>
                 </tr>
                 <tr>
-                  <th className="status-subhead status-subhead-folk">Required</th>
-                  <th className="status-subhead status-subhead-folk">Allocated</th>
-                  <th className="status-subhead status-subhead-folk">Remaining</th>
-                  <th className="status-subhead status-subhead-congregation">Required</th>
-                  <th className="status-subhead status-subhead-congregation">Allocated</th>
-                  <th className="status-subhead status-subhead-congregation">Remaining</th>
-                  <th className="status-subhead status-subhead-employee">Required</th>
-                  <th className="status-subhead status-subhead-employee">Allocated</th>
-                  <th className="status-subhead status-subhead-employee">Remaining</th>
+                  <th className="status-subhead status-subhead-folk">Req</th>
+                  <th className="status-subhead status-subhead-folk">Alloc</th>
+                  <th className="status-subhead status-subhead-folk">Rem</th>
+                  <th className="status-subhead status-subhead-congregation">Req</th>
+                  <th className="status-subhead status-subhead-congregation">Alloc</th>
+                  <th className="status-subhead status-subhead-congregation">Rem</th>
+                  <th className="status-subhead status-subhead-employee">Req</th>
+                  <th className="status-subhead status-subhead-employee">Alloc</th>
+                  <th className="status-subhead status-subhead-employee">Rem</th>
                 </tr>
               </thead>
               <tbody>
