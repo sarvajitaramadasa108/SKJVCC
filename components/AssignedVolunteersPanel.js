@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AVAILABILITY_COLUMNS, buildImageUrl, dedupeRegistrations, readJsonResponse } from "@/components/registryUtils";
+import ServiceDropdown from "@/components/ServiceDropdown";
 
 const REQUEST_TIMEOUT_MS = 120000;
 const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
@@ -71,6 +72,26 @@ export default function AssignedVolunteersPanel() {
     () => registrations.filter((row) => String(row.assignedService || "").trim()),
     [registrations]
   );
+
+  const serviceOptions = useMemo(() => {
+    const seen = new Set();
+    const next = [];
+    for (const service of services) {
+      const serviceName = String(service?.serviceName || "").trim();
+      if (!serviceName) continue;
+      const key = serviceName.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      next.push(serviceName);
+    }
+    next.sort((left, right) =>
+      left.localeCompare(right, undefined, {
+        sensitivity: "base",
+        numeric: true
+      })
+    );
+    return next;
+  }, [services]);
 
   async function refreshNow() {
     setRefreshing(true);
@@ -216,7 +237,6 @@ export default function AssignedVolunteersPanel() {
             <tbody>
               {assignedRegistrations.map((row) => {
                 const isEditing = editingRow === row.sourceRow;
-                const serviceOptions = services.map((service) => service.serviceName).filter(Boolean);
                 const draft = assignmentDrafts[row.sourceRow] || {};
                 return (
                   <tr key={row.sourceRow}>
@@ -279,19 +299,13 @@ export default function AssignedVolunteersPanel() {
                           </>
                         ) : (
                           <>
-                            <select
-                              className="category-select service-select"
+                            <ServiceDropdown
                               value={draft.serviceName || row.assignedService || ""}
-                              onChange={(event) => handleAssignService(row, event.target.value)}
+                              options={serviceOptions}
+                              placeholder={serviceOptions.length ? "Assign service" : "No services yet"}
+                              onChange={(nextService) => handleAssignService(row, nextService)}
                               disabled={savingRow === row.sourceRow || !serviceOptions.length}
-                            >
-                              <option value="">{serviceOptions.length ? "Assign service" : "No services yet"}</option>
-                              {serviceOptions.map((serviceName) => (
-                                <option key={serviceName} value={serviceName}>
-                                  {serviceName}
-                                </option>
-                              ))}
-                            </select>
+                            />
                             <div className="inline-actions">
                               <button
                                 type="button"
