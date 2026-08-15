@@ -51,16 +51,21 @@ function syncFormResponsesToMaster() {
 
   const formHeaders = buildHeaderMap(values[0]);
   const masterRows = master.getDataRange().getValues();
-  const masterIndex = buildSourceRowIndex_(masterRows);
+  const masterIndex = buildMasterRowIndex_(masterRows);
   let synced = 0;
 
   for (let i = 1; i < values.length; i++) {
     const sourceRow = i + 1;
     const row = values[i];
     if (isFormHeaderRow_(row)) continue;
-    const record = mapFormResponseRow_(row, formHeaders, sourceRow, masterIndex[sourceRow]);
+    const responseKey = buildResponseKey_(row);
+    const existingRow = masterIndex[responseKey] || masterIndex["source:" + sourceRow];
+    const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow);
     if (!record) continue;
-    upsertMasterRow_(master, record, masterIndex[sourceRow]);
+    upsertMasterRow_(master, record, existingRow);
+    const writtenRow = existingRow || master.getLastRow();
+    masterIndex[responseKey] = writtenRow;
+    masterIndex["source:" + sourceRow] = writtenRow;
     synced += 1;
   }
 
@@ -194,7 +199,8 @@ function ensureMasterHeader(sheet) {
     "Photo upload",
     "Assigned Service",
     "Assigned Category",
-    "Assignment Updated At"
+    "Assignment Updated At",
+    "Response Key"
   ];
   if (sheet.getLastRow() > 0) {
     const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
@@ -247,7 +253,7 @@ function ensureHeaders_(sheet, headers) {
   }
 }
 
-function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
+function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow) {
   const fullName = readFormCell_(row, headers.fullName, 1);
   const age = readFormCell_(row, headers.age, 2);
   const gender = readFormCell_(row, headers.gender, 3);
@@ -285,6 +291,7 @@ function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
   record[13] = photoUpload;
   record[14] = existingRow && existingRow[14] ? String(existingRow[14]).trim() : "";
   record[15] = existingRow && existingRow[15] ? String(existingRow[15]).trim() : "";
+  record[16] = responseKey;
   return record;
 }
 
@@ -318,6 +325,14 @@ function readAvailabilityForService_(row, headerIndex, fallbackIndex) {
   }
 
   return matches.join(", ");
+}
+
+function buildResponseKey_(row) {
+  return (Array.isArray(row) ? row : [])
+    .map(function (cell) {
+      return normalizeHeader_(cell);
+    })
+    .join("||");
 }
 
 function upsertMasterRow_(sheet, record, existingRowNumber) {
@@ -358,7 +373,8 @@ function mapMasterRow_(row, headers, rowNumber) {
     photoUpload: String(row[headers.photoUpload] || "").trim(),
     assignedService: String(row[headers.assignedService] || "").trim(),
     assignedCategory: String(row[headers.assignedCategory] || "").trim(),
-    assignmentUpdatedAt: String(row[headers.assignmentUpdatedAt] || "").trim()
+    assignmentUpdatedAt: String(row[headers.assignmentUpdatedAt] || "").trim(),
+    responseKey: String(row[headers.responseKey] || "").trim()
   };
 }
 
@@ -381,6 +397,7 @@ function buildHeaderMap(headerRow) {
     photoUpload: findHeaderIndex_(normalized, ["photo upload", "photo"]),
     assignedService: findHeaderIndex_(normalized, ["assigned service", "service"]),
     assignmentUpdatedAt: findHeaderIndex_(normalized, ["assignment updated at"]),
+    responseKey: findHeaderIndex_(normalized, ["response key"]),
     serviceName: findHeaderIndex_(normalized, ["service name"]),
     coordinatorName: findHeaderIndex_(normalized, ["coordinator name", "service coordinator"]),
     contactNumber: findHeaderIndex_(normalized, ["coordinator contact number", "contact number"]),
@@ -611,11 +628,13 @@ function extractDriveFileId_(value) {
   return "";
 }
 
-function buildSourceRowIndex_(rows) {
+function buildMasterRowIndex_(rows) {
   const index = {};
   for (let i = 1; i < rows.length; i++) {
+    const responseKey = String(rows[i][16] || "").trim();
     const sourceRow = Number(rows[i][1] || 0);
-    if (sourceRow) index[sourceRow] = i + 1;
+    if (responseKey) index[responseKey] = i + 1;
+    if (sourceRow) index["source:" + sourceRow] = i + 1;
   }
   return index;
 }
