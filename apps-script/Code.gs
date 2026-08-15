@@ -52,16 +52,9 @@ function syncFormResponsesToMaster() {
   const formHeaders = buildHeaderMap(values[0]);
   const masterRows = master.getDataRange().getValues();
   const masterIndex = buildSourceRowIndex_(masterRows);
-  const scriptProps = PropertiesService.getScriptProperties();
-  const lastSyncedRow = Number(scriptProps.getProperty("VOLUNTEER_LAST_SYNCED_RESPONSE_ROW") || 1);
-  const startRow = Math.max(2, lastSyncedRow + 1);
-  if (startRow > values.length) {
-    return { synced: 0 };
-  }
-
   let synced = 0;
 
-  for (let i = startRow - 1; i < values.length; i++) {
+  for (let i = 1; i < values.length; i++) {
     const sourceRow = i + 1;
     const row = values[i];
     if (isFormHeaderRow_(row)) continue;
@@ -71,7 +64,6 @@ function syncFormResponsesToMaster() {
     synced += 1;
   }
 
-  scriptProps.setProperty("VOLUNTEER_LAST_SYNCED_RESPONSE_ROW", String(values.length));
   return { synced: synced };
 }
 
@@ -262,7 +254,7 @@ function mapFormResponseRow_(row, headers, sourceRow, existingRow) {
   const mobileNumber = readFormCell_(row, headers.mobileNumber, 4);
   const devoteeInTouch = readFormCell_(row, headers.devoteeInTouch, 5);
   const areaOfStay = readFormCell_(row, headers.areaOfStay, 6);
-  const availabilityForService = readFormCell_(row, headers.availabilityForService, 7);
+  const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 7);
   const photoUpload = readFormCell_(row, headers.photoUpload, 8);
   const availability = parseAvailability_(availabilityForService);
 
@@ -302,6 +294,30 @@ function readFormCell_(row, headerIndex, fallbackIndex) {
     value = fallbackIndex >= 0 ? row[fallbackIndex] : "";
   }
   return String(value || "").trim();
+}
+
+function readAvailabilityForService_(row, headerIndex, fallbackIndex) {
+  const direct = readFormCell_(row, headerIndex, fallbackIndex);
+  if (direct) return direct;
+
+  const matches = [];
+  const seen = {};
+  const cells = Array.isArray(row) ? row : [];
+
+  for (let i = 0; i < cells.length; i++) {
+    const cellText = normalizeHeader_(cells[i]);
+    if (!cellText) continue;
+    for (let j = 0; j < AVAILABILITY_COLUMNS.length; j++) {
+      const label = AVAILABILITY_COLUMNS[j];
+      const normalizedLabel = normalizeHeader_(label);
+      if (cellText.indexOf(normalizedLabel) !== -1 && !seen[label]) {
+        seen[label] = true;
+        matches.push(label);
+      }
+    }
+  }
+
+  return matches.join(", ");
 }
 
 function upsertMasterRow_(sheet, record, existingRowNumber) {
