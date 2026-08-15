@@ -29,7 +29,7 @@ function uniqueSortedOptions(options) {
 export default function ServiceDropdown({ value, options, placeholder, onChange, disabled = false }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [menuStyle, setMenuStyle] = useState({ top: 0, left: 0, width: 360 });
+  const [menuStyle, setMenuStyle] = useState({ top: 0, left: 0, width: 360, maxHeight: 360 });
   const triggerRef = useRef(null);
   const menuRef = useRef(null);
   const searchRef = useRef(null);
@@ -66,12 +66,16 @@ export default function ServiceDropdown({ value, options, placeholder, onChange,
       const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
       const menuWidth = 360;
       const estimatedHeight = Math.min(filteredOptions.length + 2, 10) * 44 + 88;
+      const spaceBelow = Math.max(0, viewportHeight - rect.bottom - 12);
+      const spaceAbove = Math.max(0, rect.top - 12);
+      const openAbove = spaceBelow < estimatedHeight && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(180, Math.min(estimatedHeight, openAbove ? spaceAbove : spaceBelow));
+      const menuHeight = Math.min(estimatedHeight, maxHeight);
       const left = Math.max(12, Math.min(rect.left, viewportWidth - menuWidth - 12));
-      const openAbove = rect.bottom + estimatedHeight > viewportHeight - 12 && rect.top > estimatedHeight;
       const top = openAbove
-        ? Math.max(12, rect.top - estimatedHeight - 8)
+        ? Math.max(12, rect.top - menuHeight - 8)
         : Math.min(viewportHeight - 12, rect.bottom + 8);
-      setMenuStyle({ top, left, width: menuWidth });
+      setMenuStyle({ top, left, width: menuWidth, maxHeight });
     }
 
     function handlePointerDown(event) {
@@ -126,7 +130,12 @@ export default function ServiceDropdown({ value, options, placeholder, onChange,
             <div
               ref={menuRef}
               className="service-dropdown-menu"
-              style={{ top: `${menuStyle.top}px`, left: `${menuStyle.left}px`, width: `${menuStyle.width}px` }}
+              style={{
+                top: `${menuStyle.top}px`,
+                left: `${menuStyle.left}px`,
+                width: `${menuStyle.width}px`,
+                maxHeight: `${menuStyle.maxHeight}px`
+              }}
             >
               <div className="service-dropdown-menu-head">
                 <div>
