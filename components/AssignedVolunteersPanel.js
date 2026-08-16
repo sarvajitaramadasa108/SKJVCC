@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_COLUMNS, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildImageUrl, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
 import ServiceDropdown from "@/components/ServiceDropdown";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -151,17 +151,19 @@ export default function AssignedVolunteersPanel() {
     setSavingRow(row.sourceRow);
     setMessage("");
     try {
-      await fetchBridge("registrations.assignService", {
+      const response = await fetchBridge("registrations.assignService", {
         sourceRow: row.sourceRow,
         mobileNumber: row.mobileNumber,
         serviceName,
         category
       });
-      const [registrationsPayload, servicesPayload] = await Promise.all([
-        fetchBridge("registrations.list"),
-        fetchBridge("services.list")
-      ]);
-      const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+      const savedRegistration = response?.registration || {
+        ...row,
+        assignedService: serviceName,
+        assignedCategory: category || row.assignedCategory || ""
+      };
+      const nextRegistrations = mergeRegistrationRecord(registrations, savedRegistration);
+      const servicesPayload = await fetchBridge("services.list");
       const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
       setRegistrations(nextRegistrations);
       setServices(nextServices);

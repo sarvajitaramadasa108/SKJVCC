@@ -66,6 +66,40 @@ export function annotateDuplicateRegistrations(rows) {
   });
 }
 
+export function mergeRegistrationRecord(rows, updatedRow) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (!updatedRow || typeof updatedRow !== "object") {
+    return list.slice();
+  }
+
+  const targetSourceRow = Number(updatedRow.sourceRow || 0);
+  const targetResponseKey = normalizeExactText(updatedRow.responseKey);
+  let replaced = false;
+
+  const next = list.map((row) => {
+    const rowSourceRow = Number(row?.sourceRow || 0);
+    const rowResponseKey = normalizeExactText(row?.responseKey);
+    const matchesSourceRow = targetSourceRow && rowSourceRow === targetSourceRow;
+    const matchesResponseKey = targetResponseKey && rowResponseKey && rowResponseKey === targetResponseKey;
+
+    if (matchesSourceRow || matchesResponseKey) {
+      replaced = true;
+      return {
+        ...row,
+        ...updatedRow
+      };
+    }
+
+    return row;
+  });
+
+  if (!replaced) {
+    next.unshift(updatedRow);
+  }
+
+  return next;
+}
+
 export function availabilityFlags(value) {
   const normalized = normalizeText(value);
   return AVAILABILITY_COLUMNS.map((column) => ({

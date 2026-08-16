@@ -131,6 +131,7 @@ function assignService(payload) {
   sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
   updateServiceAllocationCount_(serviceSheetData, previousService, previousCategory, -1);
   updateServiceAllocationCount_(serviceSheetData, serviceName, nextCategory, 1);
+  SpreadsheetApp.flush();
 
   return {
     registration: mapMasterRow_(current, headers, targetRow)

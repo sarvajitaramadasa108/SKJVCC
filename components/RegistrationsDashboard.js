@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_COLUMNS, annotateDuplicateRegistrations, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, annotateDuplicateRegistrations, buildImageUrl, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
 import ServiceDropdown from "@/components/ServiceDropdown";
 import PortalNav from "@/components/PortalNav";
 
@@ -168,14 +168,18 @@ export default function RegistrationsDashboard() {
     setSavingRow(row.sourceRow);
     setMessage("");
     try {
-      await fetchBridge("registrations.assignService", {
+      const response = await fetchBridge("registrations.assignService", {
         sourceRow: row.sourceRow,
         mobileNumber: row.mobileNumber,
         serviceName,
         category
       });
-      const registrationsPayload = await fetchBridge("registrations.list");
-      const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+      const savedRegistration = response?.registration || {
+        ...row,
+        assignedService: serviceName,
+        assignedCategory: category || row.assignedCategory || ""
+      };
+      const nextRegistrations = mergeRegistrationRecord(registrations, savedRegistration);
       setRegistrations(nextRegistrations);
       cacheJson("skjvcc_registrations_cache", nextRegistrations);
       setAssignmentDrafts((current) => {
