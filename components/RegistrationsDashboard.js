@@ -75,24 +75,11 @@ export default function RegistrationsDashboard() {
   }, []);
 
   const filteredRegistrations = useMemo(() => {
-    const terms = String(search || "")
-      .trim()
-      .toLowerCase()
-      .split(/\s+/)
-      .filter(Boolean);
+    const terms = tokenizeFilterValue(search);
     if (!terms.length) return registrations;
     return registrations.filter((row) => {
-      const fields = [row.fullName, row.mobileNumber]
-        .map((item) => String(item || "").toLowerCase())
-        .filter(Boolean);
-
-      return terms.every((term) =>
-        fields.some((field) => {
-          if (!term) return false;
-          if (field.includes(term)) return true;
-          return field.split(/\s+/).some((part) => part === term);
-        })
-      );
+      const fields = [row.fullName, row.mobileNumber];
+      return terms.every((term) => fields.some((field) => matchesStrictFilter(String(field || ""), term)));
     });
   }, [registrations, search]);
 
@@ -138,10 +125,8 @@ export default function RegistrationsDashboard() {
       for (const field of textFilterFields) {
         const filterValue = normalizeFilterValue(filters[field.key]);
         if (!filterValue) continue;
-        const rowValue = String(field.value(row) || "").toLowerCase();
-        if (field.key === "devoteeInTouch") {
-          if (rowValue !== filterValue) return false;
-        } else if (!rowValue.includes(filterValue)) {
+        const rowValue = String(field.value(row) || "");
+        if (!matchesStrictFilter(rowValue, filterValue)) {
           return false;
         }
       }
@@ -624,6 +609,23 @@ export default function RegistrationsDashboard() {
     return String(value || "")
       .trim()
       .toLowerCase();
+  }
+
+  function tokenizeFilterValue(value) {
+    return normalizeFilterValue(value)
+      .split(/\s+/)
+      .filter(Boolean);
+  }
+
+  function matchesStrictFilter(rowValue, filterValue) {
+    const rowTokens = tokenizeFilterValue(rowValue);
+    const filterTokens = tokenizeFilterValue(filterValue);
+    if (!filterTokens.length) return true;
+    if (!rowTokens.length) return false;
+
+    return filterTokens.every((term) =>
+      rowTokens.some((token) => token === term || token.startsWith(term))
+    );
   }
 }
 
