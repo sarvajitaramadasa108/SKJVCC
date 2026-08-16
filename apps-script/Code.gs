@@ -742,6 +742,14 @@ function normalizeHeader_(value) {
     .replace(/[^a-z0-9 ]/g, "");
 }
 
+function normalizeMobile(value) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  if (digits.length === 12 && digits.indexOf("91") === 0) return digits.slice(-10);
+  if (digits.length > 10) return digits.slice(-10);
+  return digits;
+}
+
 function parseAvailability_(text) {
   const normalized = normalizeHeader_(text);
   return AVAILABILITY_COLUMNS.map(function (label) {
