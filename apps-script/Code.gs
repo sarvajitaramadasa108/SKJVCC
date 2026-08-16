@@ -117,7 +117,6 @@ function assignService(payload) {
   const serviceName = String(payload.serviceName || "").trim();
   const category = String(payload.category || "").trim();
   if (!serviceName) throw new Error("Select a service");
-  if (!category) throw new Error("Select a category");
 
   const targetRow = findMasterRowBySourceRow_(rows, sourceRow);
   if (targetRow < 2) throw new Error("Registration not found");
@@ -125,12 +124,13 @@ function assignService(payload) {
   const current = rows[targetRow - 1];
   const previousService = String(current[headers.assignedService] || "").trim();
   const previousCategory = String(current[headers.assignedCategory] || "").trim();
+  const nextCategory = category || previousCategory;
   current[headers.assignedService] = serviceName;
-  current[headers.assignedCategory] = category;
+  current[headers.assignedCategory] = nextCategory;
   current[headers.assignmentUpdatedAt] = formatNow_();
   sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
   updateServiceAllocationCount_(serviceSheetData, previousService, previousCategory, -1);
-  updateServiceAllocationCount_(serviceSheetData, serviceName, category, 1);
+  updateServiceAllocationCount_(serviceSheetData, serviceName, nextCategory, 1);
 
   return {
     registration: mapMasterRow_(current, headers, targetRow)

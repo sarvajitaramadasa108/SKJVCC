@@ -143,8 +143,8 @@ export default function RegistrationsDashboard() {
         serviceName
       }
     }));
-    if (serviceName && category) {
-      void saveAssignment(row, serviceName, category);
+    if (serviceName) {
+      void saveAssignment(row, serviceName, category || row.assignedCategory || "");
     }
   }
 
