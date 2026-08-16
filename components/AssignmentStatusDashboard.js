@@ -221,7 +221,8 @@ export default function AssignmentStatusDashboard() {
                       <td className="status-service-cell"><strong>{row.serviceName}</strong></td>
                       <td className="status-cell status-cell-folk">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           min="0"
                           className="status-input status-input-folk"
                           value={draft.requiredFolkCount ?? row.required.FOLK}
@@ -230,7 +231,8 @@ export default function AssignmentStatusDashboard() {
                       </td>
                       <td className="status-cell status-cell-folk">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           min="0"
                           className="status-input status-input-folk"
                           value={draft.allocatedFolkCount ?? row.allocated.FOLK}
@@ -240,7 +242,8 @@ export default function AssignmentStatusDashboard() {
                       <td className="status-cell status-cell-folk"><strong>{row.pending.FOLK}</strong></td>
                       <td className="status-cell status-cell-congregation">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           min="0"
                           className="status-input status-input-congregation"
                           value={draft.requiredCongCount ?? row.required.Congregation}
@@ -249,7 +252,8 @@ export default function AssignmentStatusDashboard() {
                       </td>
                       <td className="status-cell status-cell-congregation">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           min="0"
                           className="status-input status-input-congregation"
                           value={draft.allocatedCongCount ?? row.allocated.Congregation}
@@ -259,7 +263,8 @@ export default function AssignmentStatusDashboard() {
                       <td className="status-cell status-cell-congregation"><strong>{row.pending.Congregation}</strong></td>
                       <td className="status-cell status-cell-employee">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           min="0"
                           className="status-input status-input-employee"
                           value={draft.requiredEmpCount ?? row.required.Employee}
@@ -268,7 +273,8 @@ export default function AssignmentStatusDashboard() {
                       </td>
                       <td className="status-cell status-cell-employee">
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="numeric"
                           min="0"
                           className="status-input status-input-employee"
                           value={draft.allocatedEmpCount ?? row.allocated.Employee}
