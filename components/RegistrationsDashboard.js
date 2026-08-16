@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_COLUMNS, annotateDuplicateRegistrations, buildImageUrl, isAssignedRegistration, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildImageUrl, isAssignedRegistration, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
 import ServiceDropdown from "@/components/ServiceDropdown";
 import PortalNav from "@/components/PortalNav";
 
@@ -19,7 +19,6 @@ export default function RegistrationsDashboard() {
   const [search, setSearch] = useState("");
   const [columnFilters, setColumnFilters] = useState({});
   const [savingRow, setSavingRow] = useState(null);
-  const [deletingRow, setDeletingRow] = useState(null);
   const [viewer, setViewer] = useState(emptyImage());
   const [assignmentDrafts, setAssignmentDrafts] = useState({});
   const categoryOptions = useMemo(() => ["FOLK", "Congregation", "Employee"], []);
@@ -75,16 +74,14 @@ export default function RegistrationsDashboard() {
     };
   }, []);
 
-  const annotatedRegistrations = useMemo(() => annotateDuplicateRegistrations(registrations), [registrations]);
-
   const filteredRegistrations = useMemo(() => {
     const terms = String(search || "")
       .trim()
       .toLowerCase()
       .split(/\s+/)
       .filter(Boolean);
-    if (!terms.length) return annotatedRegistrations;
-    return annotatedRegistrations.filter((row) => {
+    if (!terms.length) return registrations;
+    return registrations.filter((row) => {
       const fields = [row.fullName, row.mobileNumber]
         .map((item) => String(item || "").toLowerCase())
         .filter(Boolean);
@@ -97,7 +94,7 @@ export default function RegistrationsDashboard() {
         })
       );
     });
-  }, [annotatedRegistrations, search]);
+  }, [registrations, search]);
 
   const liveRegistrations = useMemo(
     () => filteredRegistrations.filter((row) => !isAssignedRegistration(row)),
@@ -265,42 +262,6 @@ export default function RegistrationsDashboard() {
       setMessage(error.message || "Could not update service");
     } finally {
       setSavingRow(null);
-    }
-  }
-
-  async function deleteDuplicateRegistration(row) {
-    if (!row?.isDuplicate) return;
-    const label = row.fullName || row.mobileNumber || "this duplicate registration";
-    if (!window.confirm(`Delete duplicate registration for ${label}?`)) return;
-
-    setDeletingRow(row.sourceRow);
-    setMessage("");
-    try {
-      await fetchBridge("registrations.delete", {
-        sourceRow: row.sourceRow,
-        responseKey: row.responseKey,
-        fullName: row.fullName,
-        mobileNumber: row.mobileNumber,
-        age: row.age
-      });
-      setRegistrations((current) =>
-        annotateDuplicateRegistrations(
-          current.filter((item) => {
-            const sameSource = Number(item?.sourceRow || 0) === Number(row.sourceRow || 0);
-            const sameResponseKey = String(item?.responseKey || "").trim() === String(row.responseKey || "").trim();
-            return !(sameSource || sameResponseKey);
-          })
-        )
-      );
-      const registrationsPayload = await fetchBridge("registrations.list");
-      const next = Array.isArray(registrationsPayload) ? registrationsPayload : [];
-      setRegistrations(next);
-      cacheJson("skjvcc_registrations_cache", next);
-      setMessage("Duplicate registration deleted.");
-    } catch (error) {
-      setMessage(error.message || "Could not delete registration");
-    } finally {
-      setDeletingRow(null);
     }
   }
 
@@ -512,24 +473,9 @@ export default function RegistrationsDashboard() {
                 {liveFilteredRegistrations.map((row) => {
                   const draft = assignmentDrafts[row.sourceRow] || {};
                   return (
-                    <tr key={row.sourceRow} className={row.isDuplicate ? "duplicate-registration-row" : ""}>
+                    <tr key={row.sourceRow}>
                       <td className="registration-name-cell">
-                        <div className="registration-name-stack">
-                          {row.isDuplicate ? (
-                            <div className="duplicate-row-tools">
-                              <span className="duplicate-badge">Duplicate</span>
-                              <button
-                                type="button"
-                                className="secondary tiny-button duplicate-delete-button"
-                                onClick={() => deleteDuplicateRegistration(row)}
-                                disabled={deletingRow === row.sourceRow}
-                              >
-                                {deletingRow === row.sourceRow ? "Deleting..." : "Delete"}
-                              </button>
-                            </div>
-                          ) : null}
-                          <span>{row.fullName || "-"}</span>
-                        </div>
+                        <span>{row.fullName || "-"}</span>
                       </td>
                       <td>{row.age || "-"}</td>
                       <td>{row.mobileNumber || "-"}</td>
