@@ -12,12 +12,23 @@ const AVAILABILITY_COLUMNS = [
 ];
 
 function doGet(e) {
-  return jsonResponse(route(String(e && e.parameter && e.parameter.action || "registrations.list"), e ? e.parameter : {}, null));
+  return handleRequest_(String(e && e.parameter && e.parameter.action || "registrations.list"), e ? e.parameter : {}, null);
 }
 
 function doPost(e) {
   const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
-  return jsonResponse(route(String(body.action || "registrations.list"), body, e));
+  return handleRequest_(String(body.action || "registrations.list"), body, e);
+}
+
+function handleRequest_(action, payload, event) {
+  try {
+    return jsonResponse(route(action, payload, event));
+  } catch (error) {
+    return jsonResponse({
+      ok: false,
+      error: String(error && error.message ? error.message : error)
+    });
+  }
 }
 
 function route(action, payload) {
@@ -116,7 +127,7 @@ function listRegistrations() {
       return mapMasterRow_(record, masterHeaders, index + 2);
     })
     .filter(function (row) {
-      return isValidMasterRecord_(row) && !isHeaderLikeRecord_(row);
+      return row && isValidMasterRecord_(row) && !isHeaderLikeRecord_(row);
     });
 }
 
@@ -941,6 +952,7 @@ function isFormHeaderRow_(row) {
 }
 
 function isValidMasterRecord_(row) {
+  if (!row) return false;
   const fullName = normalizeHeader_(row.fullName || "");
   const mobileNumber = normalizeHeader_(row.mobileNumber || "");
   const devoteeInTouch = normalizeHeader_(row.devoteeInTouch || "");
@@ -969,6 +981,7 @@ function isValidMasterRecord_(row) {
 }
 
 function isHeaderLikeRecord_(row) {
+  if (!row) return false;
   const labels = new Set([
     "timestamp",
     "full name",
