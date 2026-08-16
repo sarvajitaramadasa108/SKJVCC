@@ -28,6 +28,7 @@ function route(action, payload) {
   if (action === "registrations.list") return { ok: true, data: listRegistrations() };
   if (action === "registrations.byService") return { ok: true, data: registrationsByService(payload.serviceName) };
   if (action === "registrations.assignService") return { ok: true, data: assignService(payload) };
+  if (action === "registrations.resetAssignments") return { ok: true, data: resetAssignments() };
   if (action === "registrations.delete") return { ok: true, data: deleteRegistration(payload) };
   if (action === "registrations.photo") return { ok: true, data: getRegistrationPhoto(payload) };
   return { ok: false, error: "Unknown action: " + action };
@@ -138,6 +139,7 @@ function assignService(payload) {
   const serviceName = String(payload.serviceName || "").trim();
   const category = String(payload.category || "").trim();
   if (!serviceName) throw new Error("Select a service");
+  if (!category) throw new Error("Select a category");
 
   const targetRow = findMasterRowBySourceRow_(rows, sourceRow);
   if (targetRow < 2) throw new Error("Registration not found");
@@ -166,6 +168,48 @@ function assignService(payload) {
 
   return {
     registration: mapMasterRow_(current, headers, targetRow)
+  };
+}
+
+function resetAssignments() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const master = masterSheet(ss);
+  const service = serviceSheet(ss);
+  const assignment = assignmentSheet(ss);
+  ensureMasterHeader(master);
+  ensureServiceHeader(service);
+  ensureAssignmentHeader(assignment);
+
+  const masterValues = master.getDataRange().getValues();
+  if (masterValues.length > 1) {
+    const headers = buildHeaderMap(masterValues[0]);
+    for (let i = 1; i < masterValues.length; i++) {
+      masterValues[i][headers.assignedService] = "";
+      masterValues[i][headers.assignedCategory] = "";
+      masterValues[i][headers.assignmentUpdatedAt] = "";
+    }
+    master.getRange(2, 1, masterValues.length - 1, masterValues[0].length).setValues(masterValues.slice(1));
+  }
+
+  const serviceValues = service.getDataRange().getValues();
+  if (serviceValues.length > 1) {
+    const headers = buildHeaderMap(serviceValues[0]);
+    for (let i = 1; i < serviceValues.length; i++) {
+      if (headers.allocatedCongCount >= 0) serviceValues[i][headers.allocatedCongCount] = 0;
+      if (headers.allocatedFolkCount >= 0) serviceValues[i][headers.allocatedFolkCount] = 0;
+      if (headers.allocatedEmpCount >= 0) serviceValues[i][headers.allocatedEmpCount] = 0;
+    }
+    service.getRange(2, 1, serviceValues.length - 1, serviceValues[0].length).setValues(serviceValues.slice(1));
+  }
+
+  const assignmentLastRow = assignment.getLastRow();
+  if (assignmentLastRow > 1) {
+    assignment.getRange(2, 1, assignmentLastRow - 1, assignment.getLastColumn()).clearContent();
+  }
+
+  SpreadsheetApp.flush();
+  return {
+    reset: true
   };
 }
 

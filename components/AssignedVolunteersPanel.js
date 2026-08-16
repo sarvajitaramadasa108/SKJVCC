@@ -123,6 +123,11 @@ export default function AssignedVolunteersPanel() {
         serviceName
       }
     }));
+    const draft = assignmentDrafts[row.sourceRow] || {};
+    const category = String(draft.category || row.assignedCategory || "").trim();
+    if (serviceName && category) {
+      await saveAssignment(row, serviceName, category);
+    }
   }
 
   async function handleAssignCategory(row, nextCategory) {
