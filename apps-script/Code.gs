@@ -546,12 +546,12 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
   const age = readFormCell_(row, headers.age, 2);
   const gender = readFormCell_(row, headers.gender, 3);
   const mobileNumber = readFormCell_(row, headers.mobileNumber, 4);
-  const devoteeInTouch = readFormCell_(row, headers.devoteeInTouch, 6);
-  const areaOfStay = readFormCell_(row, headers.areaOfStay, 7);
-  const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 8);
-  const photoUpload = readFormCell_(row, headers.photoUpload, 9);
-  const formAssignedService = readFormCell_(row, headers.formAssignedService, 10);
-  const formAssignedCategory = readFormCell_(row, headers.formAssignedCategory, 11);
+  const devoteeInTouch = readFormCell_(row, headers.devoteeInTouch, 5);
+  const areaOfStay = readFormCell_(row, headers.areaOfStay, 6);
+  const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 7);
+  const photoUpload = readFormCell_(row, headers.photoUpload, 8);
+  const formAssignedService = readFormCell_(row, headers.formAssignedService, 9);
+  const formAssignedCategory = readFormCell_(row, headers.formAssignedCategory, 10);
   const availability = parseAvailability_(availabilityForService);
   const assignedService = String(
     formAssignedService ||
