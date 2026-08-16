@@ -2,6 +2,7 @@ const SPREADSHEET_ID = "1BDU7rYRG0uCcu1aksSVRlCUni0MYGM7rYHgw7PL5OPQ";
 const FORM_RESPONSES_SHEET_NAME = "Form Responses 1";
 const MASTER_SHEET_NAME = "Volunteer Master";
 const SERVICE_SHEET_NAME = "Service Master";
+const ASSIGNMENT_SHEET_NAME = "Assignment Map";
 
 const AVAILABILITY_COLUMNS = [
   "3rd September (Half day:- 2pm to 10pm)",
@@ -36,9 +37,11 @@ function setupSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   ensureMasterHeader(masterSheet(ss));
   ensureServiceHeader(serviceSheet(ss));
+  ensureAssignmentHeader(assignmentSheet(ss));
   return {
     masterSheet: MASTER_SHEET_NAME,
-    serviceSheet: SERVICE_SHEET_NAME
+    serviceSheet: SERVICE_SHEET_NAME,
+    assignmentSheet: ASSIGNMENT_SHEET_NAME
   };
 }
 
@@ -46,7 +49,9 @@ function syncFormResponsesToMaster() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const formSheet = formResponsesSheet(ss);
   const master = masterSheet(ss);
+  const assignment = assignmentSheet(ss);
   ensureMasterHeader(master);
+  ensureAssignmentHeader(assignment);
 
   const values = formSheet.getDataRange().getValues();
   if (values.length < 2) return { synced: 0 };
@@ -54,6 +59,8 @@ function syncFormResponsesToMaster() {
   const formHeaders = buildHeaderMap(values[0]);
   const masterRows = master.getDataRange().getValues();
   const masterIndex = buildMasterRowIndex_(masterRows);
+  const assignmentRows = assignment.getDataRange().getValues();
+  const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
   let synced = 0;
 
   for (let i = 1; i < values.length; i++) {
@@ -64,12 +71,17 @@ function syncFormResponsesToMaster() {
     const fullName = readFormCell_(row, formHeaders.fullName, 1);
     const age = readFormCell_(row, formHeaders.age, 2);
     const responseKey = buildResponseKey_(row);
+    const assignmentRecord =
+      assignmentIndex[responseKey] ||
+      assignmentIndex["source:" + sourceRow] ||
+      assignmentIndex["mobile:" + normalizeMobile(mobileNumber)] ||
+      assignmentIndex["finger:" + buildVolunteerFingerprint_(fullName, mobileNumber, age)];
     const existingRow =
       masterIndex[responseKey] ||
       masterIndex["source:" + sourceRow] ||
       masterIndex["mobile:" + normalizeMobile(mobileNumber)] ||
       masterIndex["finger:" + buildVolunteerFingerprint_(fullName, mobileNumber, age)];
-    const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow);
+    const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow, assignmentRecord);
     if (!record) continue;
     upsertMasterRow_(master, record, existingRow);
     const writtenRow = existingRow || master.getLastRow();
@@ -115,7 +127,9 @@ function assignService(payload) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = masterSheet(ss);
   const serviceSheetData = serviceSheet(ss);
+  const assignment = assignmentSheet(ss);
   ensureServiceHeader(serviceSheetData);
+  ensureAssignmentHeader(assignment);
   const rows = sheet.getDataRange().getValues();
   if (rows.length < 2) throw new Error("No registrations found");
 
@@ -138,6 +152,16 @@ function assignService(payload) {
   sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
   updateServiceAllocationCount_(serviceSheetData, previousService, previousCategory, -1);
   updateServiceAllocationCount_(serviceSheetData, serviceName, nextCategory, 1);
+  upsertAssignmentRecord_(assignment, {
+    responseKey: String(current[headers.responseKey] || "").trim(),
+    sourceRow: sourceRow,
+    fullName: String(current[headers.fullName] || "").trim(),
+    age: String(current[headers.age] || "").trim(),
+    mobileNumber: String(current[headers.mobileNumber] || "").trim(),
+    assignedService: serviceName,
+    assignedCategory: nextCategory,
+    updatedAt: current[headers.assignmentUpdatedAt]
+  });
   SpreadsheetApp.flush();
 
   return {
@@ -156,7 +180,9 @@ function deleteRegistration(payload) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const master = masterSheet(ss);
   const formSheet = formResponsesSheet(ss);
+  const assignment = assignmentSheet(ss);
   ensureMasterHeader(master);
+  ensureAssignmentHeader(assignment);
 
   const masterRows = master.getDataRange().getValues();
   const formRows = formSheet.getDataRange().getValues();
@@ -187,6 +213,13 @@ function deleteRegistration(payload) {
   if (formTarget >= 2) {
     formSheet.deleteRow(formTarget);
   }
+  deleteAssignmentRecord_(assignment, {
+    responseKey: responseKey,
+    sourceRow: sourceRow,
+    fullName: payload.fullName,
+    mobileNumber: payload.mobileNumber,
+    age: payload.age
+  });
 
   syncFormResponsesToMaster();
   return {
@@ -361,6 +394,10 @@ function serviceSheet(ss) {
   return ss.getSheetByName(SERVICE_SHEET_NAME) || ss.insertSheet(SERVICE_SHEET_NAME);
 }
 
+function assignmentSheet(ss) {
+  return ss.getSheetByName(ASSIGNMENT_SHEET_NAME) || ss.insertSheet(ASSIGNMENT_SHEET_NAME);
+}
+
 function ensureMasterHeader(sheet) {
   const headers = [
     "S No",
@@ -432,6 +469,20 @@ function ensureServiceHeader(sheet) {
   ensureHeaders_(sheet, headers);
 }
 
+function ensureAssignmentHeader(sheet) {
+  const headers = [
+    "Response Key",
+    "Source Row",
+    "Full Name",
+    "Age",
+    "Mobile Number",
+    "Assigned Service",
+    "Assigned Category",
+    "Updated At"
+  ];
+  ensureHeaders_(sheet, headers);
+}
+
 function ensureHeaders_(sheet, headers) {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(headers);
@@ -450,7 +501,7 @@ function ensureHeaders_(sheet, headers) {
   }
 }
 
-function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow) {
+function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, assignmentRecord) {
   const fullName = readFormCell_(row, headers.fullName, 1);
   const age = readFormCell_(row, headers.age, 2);
   const gender = readFormCell_(row, headers.gender, 3);
@@ -460,6 +511,27 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow) 
   const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 7);
   const photoUpload = readFormCell_(row, headers.photoUpload, 8);
   const availability = parseAvailability_(availabilityForService);
+  const assignedService = String(
+    (assignmentRecord && assignmentRecord.assignedService) ||
+    (existingRow && existingRow[14]) ||
+    ""
+  ).trim();
+  const assignedCategory = String(
+    (assignmentRecord && assignmentRecord.assignedCategory) ||
+    (existingRow && existingRow[15]) ||
+    ""
+  ).trim();
+  const assignmentUpdatedAt = String(
+    (assignmentRecord && assignmentRecord.updatedAt) ||
+    (existingRow && existingRow[16]) ||
+    ""
+  ).trim();
+  const responseKeyValue = String(
+    (assignmentRecord && assignmentRecord.responseKey) ||
+    responseKey ||
+    (existingRow && existingRow[17]) ||
+    ""
+  ).trim();
 
   if (
     isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) ||
@@ -486,10 +558,10 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow) 
   record[11] = availability[2] ? "Yes" : "";
   record[12] = availability[3] ? "Yes" : "";
   record[13] = photoUpload;
-  record[14] = existingRow && existingRow[14] ? String(existingRow[14]).trim() : "";
-  record[15] = existingRow && existingRow[15] ? String(existingRow[15]).trim() : "";
-  record[16] = existingRow && existingRow[16] ? String(existingRow[16]).trim() : "";
-  record[17] = responseKey;
+  record[14] = assignedService;
+  record[15] = assignedCategory;
+  record[16] = assignmentUpdatedAt;
+  record[17] = responseKeyValue;
   return record;
 }
 
@@ -964,6 +1036,88 @@ function buildMasterRowIndex_(rows) {
     if (fingerprint) index["finger:" + fingerprint] = i + 1;
   }
   return index;
+}
+
+function buildAssignmentRowIndex_(rows) {
+  const index = {};
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const record = mapAssignmentRow_(row, i + 1);
+    if (!record) continue;
+    if (record.responseKey) index[record.responseKey] = record;
+    if (record.sourceRow) index["source:" + record.sourceRow] = record;
+    const mobileNumber = normalizeMobile(record.mobileNumber);
+    if (mobileNumber) index["mobile:" + mobileNumber] = record;
+    const fingerprint = buildVolunteerFingerprint_(record.fullName, mobileNumber, record.age);
+    if (fingerprint) index["finger:" + fingerprint] = record;
+  }
+  return index;
+}
+
+function mapAssignmentRow_(row, rowNumber) {
+  return {
+    rowNumber: rowNumber,
+    responseKey: String(row[0] || "").trim(),
+    sourceRow: Number(row[1] || 0),
+    fullName: String(row[2] || "").trim(),
+    age: String(row[3] || "").trim(),
+    mobileNumber: String(row[4] || "").trim(),
+    assignedService: String(row[5] || "").trim(),
+    assignedCategory: String(row[6] || "").trim(),
+    updatedAt: String(row[7] || "").trim()
+  };
+}
+
+function upsertAssignmentRecord_(sheet, record) {
+  const rows = sheet.getDataRange().getValues();
+  const rowIndex = findAssignmentRowIndex_(rows, record);
+  const nextRow = [
+    String(record.responseKey || "").trim(),
+    Number(record.sourceRow || 0),
+    String(record.fullName || "").trim(),
+    String(record.age || "").trim(),
+    String(record.mobileNumber || "").trim(),
+    String(record.assignedService || "").trim(),
+    String(record.assignedCategory || "").trim(),
+    String(record.updatedAt || "").trim()
+  ];
+
+  if (rowIndex >= 2) {
+    sheet.getRange(rowIndex, 1, 1, nextRow.length).setValues([nextRow]);
+  } else {
+    sheet.appendRow(nextRow);
+  }
+}
+
+function deleteAssignmentRecord_(sheet, criteria) {
+  const rows = sheet.getDataRange().getValues();
+  const rowIndex = findAssignmentRowIndex_(rows, criteria);
+  if (rowIndex >= 2) {
+    sheet.deleteRow(rowIndex);
+  }
+}
+
+function findAssignmentRowIndex_(rows, criteria) {
+  const responseKey = String(criteria && criteria.responseKey || "").trim();
+  const sourceRow = Number(criteria && criteria.sourceRow || 0);
+  const fullName = normalizeHeader_(criteria && criteria.fullName || "");
+  const mobileNumber = normalizeMobile(criteria && criteria.mobileNumber || "");
+  const age = normalizeHeader_(criteria && criteria.age || "");
+
+  for (let i = 1; i < rows.length; i++) {
+    const rowResponseKey = String(rows[i][0] || "").trim();
+    const rowSourceRow = Number(rows[i][1] || 0);
+    const rowName = normalizeHeader_(rows[i][2] || "");
+    const rowAge = normalizeHeader_(rows[i][3] || "");
+    const rowMobile = normalizeMobile(rows[i][4] || "");
+
+    if (responseKey && rowResponseKey && rowResponseKey === responseKey) return i + 1;
+    if (sourceRow && rowSourceRow && rowSourceRow === sourceRow) return i + 1;
+    if (mobileNumber && rowMobile && rowMobile === mobileNumber && (!fullName || rowName === fullName) && (!age || rowAge === age)) return i + 1;
+    if (fullName && mobileNumber && age && rowName === fullName && rowMobile === mobileNumber && rowAge === age) return i + 1;
+  }
+
+  return -1;
 }
 
 function findMasterRowBySourceRow_(rows, sourceRow) {
