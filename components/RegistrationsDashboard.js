@@ -17,6 +17,7 @@ export default function RegistrationsDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
+  const [columnFilters, setColumnFilters] = useState({});
   const [savingRow, setSavingRow] = useState(null);
   const [deletingRow, setDeletingRow] = useState(null);
   const [viewer, setViewer] = useState(emptyImage());
@@ -103,6 +104,46 @@ export default function RegistrationsDashboard() {
     [filteredRegistrations]
   );
 
+  const liveFilteredRegistrations = useMemo(() => {
+    const filters = columnFilters;
+    const textFilterFields = [
+      { key: "fullName", value: (row) => row.fullName },
+      { key: "age", value: (row) => row.age },
+      { key: "mobileNumber", value: (row) => row.mobileNumber },
+      { key: "devoteeInTouch", value: (row) => row.devoteeInTouch },
+      { key: "areaOfStay", value: (row) => row.areaOfStay },
+      { key: "service", value: (row) => row.assignedService || "" },
+      { key: "category", value: (row) => row.assignedCategory || "" }
+    ];
+
+    return liveRegistrations.filter((row) => {
+      for (const field of textFilterFields) {
+        const filterValue = normalizeFilterValue(filters[field.key]);
+        if (!filterValue) continue;
+        const rowValue = String(field.value(row) || "").toLowerCase();
+        if (!rowValue.includes(filterValue)) return false;
+      }
+
+      for (let i = 0; i < AVAILABILITY_COLUMNS.length; i++) {
+        const column = AVAILABILITY_COLUMNS[i];
+        const filterValue = normalizeFilterValue(filters[`availability-${i}`]);
+        if (!filterValue) continue;
+        const available = Boolean(row.availabilityFlags?.[i]?.available);
+        if (filterValue === "available" && !available) return false;
+        if (filterValue === "not available" && available) return false;
+      }
+
+      const photoFilter = normalizeFilterValue(filters.photo);
+      if (photoFilter) {
+        const hasPhoto = Boolean(row.photoUpload);
+        if (photoFilter === "has photo" && !hasPhoto) return false;
+        if (photoFilter === "no photo" && hasPhoto) return false;
+      }
+
+      return true;
+    });
+  }, [columnFilters, liveRegistrations]);
+
   const totals = useMemo(() => {
     const assigned = registrations.filter((row) => String(row.assignedService || "").trim()).length;
     return {
@@ -111,6 +152,12 @@ export default function RegistrationsDashboard() {
       unassigned: registrations.length - assigned
     };
   }, [registrations]);
+
+  const activeFilterCount = useMemo(
+    () =>
+      Object.values(columnFilters).filter((value) => String(value || "").trim() !== "").length,
+    [columnFilters]
+  );
 
   const serviceOptions = useMemo(() => {
     const seen = new Set();
@@ -283,14 +330,23 @@ export default function RegistrationsDashboard() {
       {message ? <section className="notice">{message}</section> : null}
 
       <section className="panel table-panel">
-        <div className="panel-head">
+          <div className="panel-head">
           <div>
             <h2>Live registrations</h2>
             <p className="subtle-dark">These volunteers do not have a service assigned yet.</p>
           </div>
+          {activeFilterCount ? (
+            <button
+              type="button"
+              className="secondary tiny-button"
+              onClick={() => setColumnFilters({})}
+            >
+              Clear filters
+            </button>
+          ) : null}
         </div>
 
-        {liveRegistrations.length ? (
+        {liveFilteredRegistrations.length ? (
           <div className="table-wrap">
               <table className="data-table live-registrations-table">
               <thead>
@@ -307,9 +363,112 @@ export default function RegistrationsDashboard() {
                   <th>Service</th>
                   <th>Category</th>
                 </tr>
+                <tr className="table-filter-row">
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.fullName || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, fullName: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.age || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, age: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.mobileNumber || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, mobileNumber: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.devoteeInTouch || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, devoteeInTouch: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.areaOfStay || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, areaOfStay: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                  {AVAILABILITY_COLUMNS.map((column, index) => (
+                    <th key={`filter-${column}`}>
+                      <select
+                        className="table-filter-select"
+                        value={columnFilters[`availability-${index}`] || ""}
+                        onChange={(event) =>
+                          setColumnFilters((current) => ({
+                            ...current,
+                            [`availability-${index}`]: event.target.value
+                          }))
+                        }
+                      >
+                        <option value="">All</option>
+                        <option value="available">Available</option>
+                        <option value="not available">Not available</option>
+                      </select>
+                    </th>
+                  ))}
+                  <th>
+                    <select
+                      className="table-filter-select"
+                      value={columnFilters.photo || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, photo: event.target.value }))
+                      }
+                    >
+                      <option value="">All</option>
+                      <option value="has photo">Has photo</option>
+                      <option value="no photo">No photo</option>
+                    </select>
+                  </th>
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.service || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, service: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                  <th>
+                    <input
+                      className="table-filter-input"
+                      value={columnFilters.category || ""}
+                      onChange={(event) =>
+                        setColumnFilters((current) => ({ ...current, category: event.target.value }))
+                      }
+                      placeholder="Filter"
+                    />
+                  </th>
+                </tr>
               </thead>
               <tbody>
-                {liveRegistrations.map((row) => {
+                {liveFilteredRegistrations.map((row) => {
                   const draft = assignmentDrafts[row.sourceRow] || {};
                   return (
                     <tr key={row.sourceRow} className={row.isDuplicate ? "duplicate-registration-row" : ""}>
@@ -410,7 +569,11 @@ export default function RegistrationsDashboard() {
           </div>
         ) : (
           <div className="empty-state">
-            {refreshing ? "Loading latest registrations..." : "No registrations found yet."}
+            {refreshing
+              ? "Loading latest registrations..."
+              : liveRegistrations.length
+                ? "No registrations match the current filters."
+                : "No registrations found yet."}
           </div>
         )}
       </section>
@@ -468,6 +631,12 @@ export default function RegistrationsDashboard() {
     } finally {
       setRefreshing(false);
     }
+  }
+
+  function normalizeFilterValue(value) {
+    return String(value || "")
+      .trim()
+      .toLowerCase();
   }
 }
 

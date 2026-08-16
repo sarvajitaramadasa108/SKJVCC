@@ -449,6 +449,32 @@ button:disabled {
   transform: translateZ(0);
 }
 
+.live-registrations-table thead tr.table-filter-row th {
+  top: 33px;
+  z-index: 28;
+  padding: 6px 6px 8px;
+  background: #fbf4e8;
+}
+
+.table-filter-input,
+.table-filter-select {
+  min-height: 32px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.2;
+  background: rgba(255, 255, 255, 0.98);
+}
+
+.table-filter-input::placeholder {
+  color: rgba(111, 99, 86, 0.8);
+}
+
+.table-filter-select {
+  width: 100%;
+  padding-right: 26px;
+}
+
 .data-table th:nth-child(1),
 .data-table td:nth-child(1) {
   width: 48px;
