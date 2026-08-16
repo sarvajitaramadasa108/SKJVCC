@@ -93,19 +93,27 @@ function syncFormResponsesToMaster() {
 function listRegistrations() {
   syncFormResponsesToMaster();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const removed = cleanupRegistrationRowsByNames_(ss, ["ydrd", "test"]);
-  if (removed > 0) {
-    syncFormResponsesToMaster();
-  }
-  const sheet = masterSheet(ss);
-  const rows = sheet.getDataRange().getValues();
+  const formSheet = formResponsesSheet(ss);
+  const assignment = assignmentSheet(ss);
+  const rows = formSheet.getDataRange().getValues();
   if (rows.length < 2) return [];
 
   const headers = buildHeaderMap(rows[0]);
+  const assignmentRows = assignment.getDataRange().getValues();
+  const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
+  const masterHeaders = buildHeaderMap(masterHeaderRow_());
+
   return rows
     .slice(1)
     .map(function (row, index) {
-      return mapMasterRow_(row, headers, index + 2);
+      const sourceRow = index + 2;
+      const responseKey = buildResponseKey_(row);
+      const assignmentRecord =
+        assignmentIndex[responseKey] ||
+        assignmentIndex["source:" + sourceRow];
+      const record = mapFormResponseRow_(row, headers, sourceRow, responseKey, null, assignmentRecord);
+      if (!record) return null;
+      return mapMasterRow_(record, masterHeaders, index + 2);
     })
     .filter(function (row) {
       return isValidMasterRecord_(row) && !isHeaderLikeRecord_(row);
@@ -443,7 +451,21 @@ function assignmentSheet(ss) {
 }
 
 function ensureMasterHeader(sheet) {
-  const headers = [
+  const headers = masterHeaderRow_();
+  if (sheet.getLastRow() > 0) {
+    const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
+    const normalized = currentHeaders.map(function (cell) {
+      return normalizeHeader_(cell);
+    });
+    if (normalized.indexOf("assignment flag") === -1 && sheet.getLastColumn() < headers.length) {
+      sheet.insertColumnAfter(sheet.getLastColumn());
+    }
+  }
+  ensureHeaders_(sheet, headers);
+}
+
+function masterHeaderRow_() {
+  return [
     "S No",
     "Source Row",
     "Full Name",
@@ -464,16 +486,6 @@ function ensureMasterHeader(sheet) {
     "Assignment Updated At",
     "Response Key"
   ];
-  if (sheet.getLastRow() > 0) {
-    const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
-    const normalized = currentHeaders.map(function (cell) {
-      return normalizeHeader_(cell);
-    });
-    if (normalized.indexOf("assignment flag") === -1 && sheet.getLastColumn() < headers.length) {
-      sheet.insertColumnAfter(sheet.getLastColumn());
-    }
-  }
-  ensureHeaders_(sheet, headers);
 }
 
 function ensureServiceHeader(sheet) {
