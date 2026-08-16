@@ -132,6 +132,7 @@ export default function AssignedVolunteersPanel() {
 
   async function handleAssignCategory(row, nextCategory) {
     const category = String(nextCategory || "").trim();
+    setEditingRow(row.sourceRow);
     setAssignmentDrafts((current) => ({
       ...current,
       [row.sourceRow]: {
@@ -366,19 +367,47 @@ export default function AssignedVolunteersPanel() {
                             </button>
                           </>
                         ) : (
-                          <select
-                            className="category-select"
-                            value={draft.category || row.assignedCategory || ""}
-                            onChange={(event) => handleAssignCategory(row, event.target.value)}
-                            disabled={savingRow === row.sourceRow}
-                          >
-                            <option value="">Select category</option>
-                            {categoryOptions.map((category) => (
-                              <option key={category} value={category}>
-                                {category}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="stack compact-stack">
+                            <select
+                              className="category-select"
+                              value={draft.category || row.assignedCategory || ""}
+                              onChange={(event) => handleAssignCategory(row, event.target.value)}
+                              disabled={savingRow === row.sourceRow}
+                            >
+                              <option value="">Select category</option>
+                              {categoryOptions.map((category) => (
+                                <option key={category} value={category}>
+                                  {category}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="inline-actions">
+                              <button
+                                type="button"
+                                className="link-button link-button-small"
+                                onClick={() => handleSaveDraft(row)}
+                                disabled={savingRow === row.sourceRow}
+                              >
+                                Save changes
+                              </button>
+                              {row.assignedCategory ? (
+                                <button
+                                  type="button"
+                                  className="link-button link-button-small"
+                                  onClick={() => {
+                                    setEditingRow(null);
+                                    setAssignmentDrafts((current) => {
+                                      const next = { ...current };
+                                      delete next[row.sourceRow];
+                                      return next;
+                                    });
+                                  }}
+                                >
+                                  Cancel
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </td>
