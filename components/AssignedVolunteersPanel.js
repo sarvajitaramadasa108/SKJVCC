@@ -5,8 +5,8 @@ import { AVAILABILITY_COLUMNS, buildImageUrl, isAssignedRegistration, mergeRegis
 import ServiceDropdown from "@/components/ServiceDropdown";
 
 const REQUEST_TIMEOUT_MS = 120000;
-const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache";
-const SERVICES_CACHE_KEY = "skjvcc_services_cache";
+const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache_v2";
+const SERVICES_CACHE_KEY = "skjvcc_services_cache_v2";
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };

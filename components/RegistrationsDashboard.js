@@ -6,6 +6,8 @@ import ServiceDropdown from "@/components/ServiceDropdown";
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
+const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache_v2";
+const SERVICES_CACHE_KEY = "skjvcc_services_cache_v2";
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
@@ -25,8 +27,8 @@ export default function RegistrationsDashboard() {
 
   useEffect(() => {
     let alive = true;
-    const cachedRegistrations = readCachedJson("skjvcc_registrations_cache");
-    const cachedServices = readCachedJson("skjvcc_services_cache");
+    const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
+    const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
     if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
     if (Array.isArray(cachedServices)) setServices(cachedServices);
 
@@ -37,7 +39,7 @@ export default function RegistrationsDashboard() {
         if (!alive) return;
         const next = Array.isArray(registrationsPayload) ? registrationsPayload : [];
         setRegistrations(next);
-        cacheJson("skjvcc_registrations_cache", next);
+        cacheJson(REGISTRATIONS_CACHE_KEY, next);
       } catch (error) {
         if (alive) {
           const message = String(error?.message || "");
@@ -56,7 +58,7 @@ export default function RegistrationsDashboard() {
         if (!alive) return;
         const next = Array.isArray(servicesPayload) ? servicesPayload : [];
         setServices(next);
-        cacheJson("skjvcc_services_cache", next);
+        cacheJson(SERVICES_CACHE_KEY, next);
       } catch {
         if (alive) setServices([]);
       }
@@ -236,7 +238,7 @@ export default function RegistrationsDashboard() {
       };
       const nextRegistrations = mergeRegistrationRecord(registrations, savedRegistration);
       setRegistrations(nextRegistrations);
-      cacheJson("skjvcc_registrations_cache", nextRegistrations);
+      cacheJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
       setAssignmentDrafts((current) => {
         const next = { ...current };
         delete next[row.sourceRow];
@@ -591,7 +593,7 @@ export default function RegistrationsDashboard() {
       fetchBridge("services.list")
         .then((servicesPayload) => {
           setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
-          cacheJson("skjvcc_services_cache", Array.isArray(servicesPayload) ? servicesPayload : []);
+          cacheJson(SERVICES_CACHE_KEY, Array.isArray(servicesPayload) ? servicesPayload : []);
       })
         .catch(() => setServices([]));
       setMessage("Data refreshed");

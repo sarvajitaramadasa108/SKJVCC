@@ -6,8 +6,8 @@ import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonRespon
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
-const SERVICES_CACHE_KEY = "skjvcc_services_cache";
-const SERVICE_ROWS_CACHE_KEY = "skjvcc_service_rows_cache";
+const SERVICES_CACHE_KEY = "skjvcc_services_cache_v2";
+const SERVICE_ROWS_CACHE_KEY = "skjvcc_service_rows_cache_v2";
 
 function emptyImage() {
   return { open: false, loading: false, src: "", title: "", error: "" };
