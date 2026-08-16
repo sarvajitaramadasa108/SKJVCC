@@ -23,6 +23,7 @@ function route(action, payload) {
   if (action === "setup") return { ok: true, data: setupSheets() };
   if (action === "sync.formResponses") return { ok: true, data: syncFormResponsesToMaster() };
   if (action === "services.list") return { ok: true, data: listServices() };
+  if (action === "services.updateCounts") return { ok: true, data: updateServiceCounts(payload) };
   if (action === "registrations.list") return { ok: true, data: listRegistrations() };
   if (action === "registrations.byService") return { ok: true, data: registrationsByService(payload.serviceName) };
   if (action === "registrations.assignService") return { ok: true, data: assignService(payload) };
@@ -101,6 +102,8 @@ function registrationsByService(serviceName) {
 function assignService(payload) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = masterSheet(ss);
+  const serviceSheetData = serviceSheet(ss);
+  ensureServiceHeader(serviceSheetData);
   const rows = sheet.getDataRange().getValues();
   if (rows.length < 2) throw new Error("No registrations found");
 
@@ -115,10 +118,14 @@ function assignService(payload) {
   if (targetRow < 2) throw new Error("Registration not found");
 
   const current = rows[targetRow - 1];
+  const previousService = String(current[headers.assignedService] || "").trim();
+  const previousCategory = String(current[headers.assignedCategory] || "").trim();
   current[headers.assignedService] = serviceName;
   current[headers.assignedCategory] = category;
   current[headers.assignmentUpdatedAt] = formatNow_();
   sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
+  updateServiceAllocationCount_(serviceSheetData, previousService, previousCategory, -1);
+  updateServiceAllocationCount_(serviceSheetData, serviceName, category, 1);
 
   return {
     registration: mapMasterRow_(current, headers, targetRow)
@@ -128,43 +135,70 @@ function assignService(payload) {
 function listServices() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sheet = serviceSheet(ss);
+  ensureServiceHeader(sheet);
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
   const headers = buildHeaderMap(values[0]);
+  const allocatedSeedCounts = buildAllocatedSeedCounts_();
+  let changed = false;
   const seen = {};
+  const result = [];
 
-  return values.slice(1).map(function (row, index) {
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
     const serviceName = String(row[headers.serviceName] || row[1] || "").trim();
-    const coordinatorName = String(row[headers.coordinatorName] || row[2] || "").trim();
-    const contactNumber = String(row[headers.contactNumber] || row[3] || "").trim();
-    const reportingTime = String(row[headers.reportingTime] || row[4] || "").trim();
-    const photoUrl = String(row[headers.photoUrl] || row[5] || "").trim();
-    const requiredCongCount = Number(row[headers.requiredCongCount] || row[6] || 0);
-    const requiredFolkCount = Number(row[headers.requiredFolkCount] || row[7] || 0);
-    const requiredEmpCount = Number(row[headers.requiredEmpCount] || row[8] || 0);
-    const totalRequired = requiredCongCount + requiredFolkCount + requiredEmpCount;
-    const requiredCount = Number(row[headers.requiredCount] || 0) || totalRequired;
+    if (!serviceName) continue;
+    const serviceKey = normalizeHeader_(serviceName);
+    if (seen[serviceKey]) continue;
+    seen[serviceKey] = true;
+
+    const seedCounts = allocatedSeedCounts[serviceKey] || emptyCategoryCounts();
+    if (headers.allocatedCongCount >= 0 && String(row[headers.allocatedCongCount] || "").trim() === "" && seedCounts.Congregation) {
+      row[headers.allocatedCongCount] = seedCounts.Congregation;
+      changed = true;
+    }
+    if (headers.allocatedFolkCount >= 0 && String(row[headers.allocatedFolkCount] || "").trim() === "" && seedCounts.FOLK) {
+      row[headers.allocatedFolkCount] = seedCounts.FOLK;
+      changed = true;
+    }
+    if (headers.allocatedEmpCount >= 0 && String(row[headers.allocatedEmpCount] || "").trim() === "" && seedCounts.Employee) {
+      row[headers.allocatedEmpCount] = seedCounts.Employee;
+      changed = true;
+    }
+
+    const requiredCongCount = readNumericCell_(row, headers.requiredCongCount);
+    const requiredFolkCount = readNumericCell_(row, headers.requiredFolkCount);
+    const requiredEmpCount = readNumericCell_(row, headers.requiredEmpCount);
+    const allocatedCongCount = readNumericCell_(row, headers.allocatedCongCount);
+    const allocatedFolkCount = readNumericCell_(row, headers.allocatedFolkCount);
+    const allocatedEmpCount = readNumericCell_(row, headers.allocatedEmpCount);
+    const requiredCount = readNumericCell_(row, headers.requiredCount) || requiredCongCount + requiredFolkCount + requiredEmpCount;
     const active = headers.active >= 0 ? String(row[headers.active] || "").trim().toLowerCase() !== "false" : true;
 
-    return {
-      rowNumber: index + 2,
+    result.push({
+      rowNumber: i + 1,
       serviceName: serviceName,
-      coordinatorName: coordinatorName,
-      contactNumber: contactNumber,
-      reportingTime: reportingTime,
+      coordinatorName: String(row[headers.coordinatorName] || row[2] || "").trim(),
+      contactNumber: String(row[headers.contactNumber] || row[3] || "").trim(),
+      reportingTime: String(row[headers.reportingTime] || row[4] || "").trim(),
       requiredCount: requiredCount,
       requiredCongCount: requiredCongCount,
       requiredFolkCount: requiredFolkCount,
       requiredEmpCount: requiredEmpCount,
-      photoUrl: photoUrl,
+      allocatedCount: allocatedCongCount + allocatedFolkCount + allocatedEmpCount,
+      allocatedCongCount: allocatedCongCount || seedCounts.Congregation,
+      allocatedFolkCount: allocatedFolkCount || seedCounts.FOLK,
+      allocatedEmpCount: allocatedEmpCount || seedCounts.Employee,
+      photoUrl: String(row[headers.photoUrl] || row[5] || "").trim(),
       active: active
-    };
-  }).filter(function (row) {
-    if (!row.serviceName) return false;
-    if (seen[row.serviceName]) return false;
-    seen[row.serviceName] = true;
-    return true;
-  });
+    });
+  }
+
+  if (changed) {
+    sheet.getRange(2, 1, values.length - 1, values[0].length).setValues(values.slice(1));
+  }
+
+  return result;
 }
 
 function formResponsesSheet(ss) {
@@ -230,8 +264,25 @@ function ensureServiceHeader(sheet) {
     "No. of Req Cong Volunteers",
     "No. of Req FOLK Volunteers",
     "No. of Req Emp Volunteers",
+    "No. of Alloc Cong Volunteers",
+    "No. of Alloc FOLK Volunteers",
+    "No. of Alloc Emp Volunteers",
     "Active"
   ];
+  if (sheet.getLastRow() > 0) {
+    const currentHeaders = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
+    const normalized = currentHeaders.map(function (cell) {
+      return normalizeHeader_(cell);
+    });
+    if (normalized.indexOf("no of alloc cong volunteers") === -1) {
+      const activeIndex = normalized.indexOf("active");
+      if (activeIndex >= 0) {
+        sheet.insertColumnsBefore(activeIndex + 1, 3);
+      } else if (sheet.getLastColumn() < headers.length) {
+        sheet.insertColumnsAfter(sheet.getLastColumn(), 3);
+      }
+    }
+  }
   ensureHeaders_(sheet, headers);
 }
 
@@ -327,6 +378,118 @@ function readAvailabilityForService_(row, headerIndex, fallbackIndex) {
   return matches.join(", ");
 }
 
+function buildAllocatedSeedCounts_() {
+  const counts = {};
+  const registrations = listRegistrations();
+
+  for (let i = 0; i < registrations.length; i++) {
+    const row = registrations[i];
+    const serviceName = normalizeHeader_(row.assignedService || "");
+    const category = normalizeCategory_(row.assignedCategory);
+    if (!serviceName || !category) continue;
+    if (!counts[serviceName]) counts[serviceName] = emptyCategoryCounts();
+    counts[serviceName][category] = (counts[serviceName][category] || 0) + 1;
+  }
+
+  return counts;
+}
+
+function updateServiceAllocationCount_(sheet, serviceName, category, delta) {
+  const targetService = String(serviceName || "").trim();
+  const targetCategory = normalizeCategory_(category);
+  const step = Number(delta || 0);
+  if (!targetService || !targetCategory || !step) return;
+
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return;
+  const headers = buildHeaderMap(values[0]);
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const name = String(row[headers.serviceName] || row[1] || "").trim();
+    if (normalizeHeader_(name) !== normalizeHeader_(targetService)) continue;
+
+    const columnMap = {
+      Congregation: headers.allocatedCongCount,
+      FOLK: headers.allocatedFolkCount,
+      Employee: headers.allocatedEmpCount
+    };
+    const columnIndex = columnMap[targetCategory];
+    if (columnIndex < 0) return;
+    const current = readNumericCell_(row, columnIndex);
+    const next = Math.max(0, current + step);
+    row[columnIndex] = next;
+    sheet.getRange(i + 1, 1, 1, values[0].length).setValues([row]);
+    return;
+  }
+}
+
+function updateServiceCounts(payload) {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const sheet = serviceSheet(ss);
+  ensureServiceHeader(sheet);
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) throw new Error("No services found");
+
+  const headers = buildHeaderMap(values[0]);
+  const serviceName = String(payload.serviceName || "").trim();
+  if (!serviceName) throw new Error("Select a service");
+
+  for (let i = 1; i < values.length; i++) {
+    const row = values[i];
+    const name = String(row[headers.serviceName] || row[1] || "").trim();
+    if (normalizeHeader_(name) !== normalizeHeader_(serviceName)) continue;
+
+    row[headers.requiredCongCount] = readNumericPayload_(payload.requiredCongCount, row[headers.requiredCongCount]);
+    row[headers.requiredFolkCount] = readNumericPayload_(payload.requiredFolkCount, row[headers.requiredFolkCount]);
+    row[headers.requiredEmpCount] = readNumericPayload_(payload.requiredEmpCount, row[headers.requiredEmpCount]);
+    row[headers.allocatedCongCount] = readNumericPayload_(payload.allocatedCongCount, row[headers.allocatedCongCount]);
+    row[headers.allocatedFolkCount] = readNumericPayload_(payload.allocatedFolkCount, row[headers.allocatedFolkCount]);
+    row[headers.allocatedEmpCount] = readNumericPayload_(payload.allocatedEmpCount, row[headers.allocatedEmpCount]);
+    sheet.getRange(i + 1, 1, 1, values[0].length).setValues([row]);
+    return {
+      serviceName: serviceName,
+      requiredCongCount: Number(row[headers.requiredCongCount] || 0),
+      requiredFolkCount: Number(row[headers.requiredFolkCount] || 0),
+      requiredEmpCount: Number(row[headers.requiredEmpCount] || 0),
+      allocatedCongCount: Number(row[headers.allocatedCongCount] || 0),
+      allocatedFolkCount: Number(row[headers.allocatedFolkCount] || 0),
+      allocatedEmpCount: Number(row[headers.allocatedEmpCount] || 0)
+    };
+  }
+
+  throw new Error("Service not found");
+}
+
+function readNumericCell_(row, headerIndex) {
+  if (headerIndex < 0) return 0;
+  const value = Number(row[headerIndex] || 0);
+  return Number.isFinite(value) ? value : 0;
+}
+
+function readNumericPayload_(value, fallback) {
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) return parsed;
+  const fallbackValue = Number(fallback || 0);
+  return Number.isFinite(fallbackValue) ? fallbackValue : 0;
+}
+
+function normalizeCategory_(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (text === "folk") return "FOLK";
+  if (text === "congregation" || text === "congregational") return "Congregation";
+  if (text === "employee") return "Employee";
+  return "";
+}
+
+function emptyCategoryCounts() {
+  return {
+    FOLK: 0,
+    Congregation: 0,
+    Employee: 0
+  };
+}
+
 function buildResponseKey_(row) {
   return (Array.isArray(row) ? row : [])
     .map(function (cell) {
@@ -406,6 +569,9 @@ function buildHeaderMap(headerRow) {
     requiredCongCount: findHeaderIndex_(normalized, ["no. of req cong volunteers", "req cong volunteers", "cong volunteers", "congregational volunteers"]),
     requiredFolkCount: findHeaderIndex_(normalized, ["no. of req folk volunteers", "req folk volunteers", "folk volunteers"]),
     requiredEmpCount: findHeaderIndex_(normalized, ["no. of req emp volunteers", "req emp volunteers", "emp volunteers"]),
+    allocatedCongCount: findHeaderIndex_(normalized, ["no. of alloc cong volunteers", "allocated cong volunteers", "alloted cong volunteers", "allotted cong volunteers"]),
+    allocatedFolkCount: findHeaderIndex_(normalized, ["no. of alloc folk volunteers", "allocated folk volunteers", "alloted folk volunteers", "allotted folk volunteers"]),
+    allocatedEmpCount: findHeaderIndex_(normalized, ["no. of alloc emp volunteers", "allocated emp volunteers", "alloted emp volunteers", "allotted emp volunteers"]),
     photoUrl: findHeaderIndex_(normalized, ["coordinator photo link", "photo url", "photo"]),
     assignedCategory: findHeaderIndex_(normalized, ["assigned category", "category"]),
     active: findHeaderIndex_(normalized, ["active"])
