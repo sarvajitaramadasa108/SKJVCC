@@ -140,7 +140,10 @@ function assignService(payload) {
 function deleteRegistration(payload) {
   const sourceRow = Number(payload.sourceRow || 0);
   const responseKey = String(payload.responseKey || "").trim();
-  if (!sourceRow && !responseKey) throw new Error("Registration not found");
+  const fullName = normalizeHeader_(payload.fullName || "");
+  const mobileNumber = normalizeHeader_(payload.mobileNumber || "");
+  const age = normalizeHeader_(payload.age || "");
+  if (!sourceRow && !responseKey && !fullName && !mobileNumber && !age) throw new Error("Registration not found");
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const master = masterSheet(ss);
@@ -148,25 +151,39 @@ function deleteRegistration(payload) {
   ensureMasterHeader(master);
 
   const masterRows = master.getDataRange().getValues();
-  if (masterRows.length < 2) throw new Error("No registrations found");
+  const formRows = formSheet.getDataRange().getValues();
+  if (masterRows.length < 2 || formRows.length < 2) throw new Error("No registrations found");
 
-  const masterIndex = buildMasterRowIndex_(masterRows);
-  const targetRow = (responseKey && masterIndex[responseKey]) || findMasterRowBySourceRow_(masterRows, sourceRow);
-  if (targetRow < 2) throw new Error("Registration not found");
+  const masterHeaders = buildHeaderMap(masterRows[0]);
+  const formHeaders = buildHeaderMap(formRows[0]);
+  const masterTarget = findDeleteTargetRow_(masterRows, masterHeaders, {
+    responseKey: responseKey,
+    fullName: fullName,
+    mobileNumber: mobileNumber,
+    age: age,
+    sourceRow: sourceRow
+  });
+  const formTarget = findDeleteTargetRow_(formRows, formHeaders, {
+    responseKey: responseKey,
+    fullName: fullName,
+    mobileNumber: mobileNumber,
+    age: age,
+    sourceRow: sourceRow
+  });
 
-  const headers = buildHeaderMap(masterRows[0]);
-  const row = masterRows[targetRow - 1];
-  const formRowNumber = Number(row[headers.sourceRow] || sourceRow || 0);
+  if (masterTarget < 2 && formTarget < 2) throw new Error("Registration not found");
 
-  master.deleteRow(targetRow);
-  if (formRowNumber >= 2 && formRowNumber <= formSheet.getLastRow()) {
-    formSheet.deleteRow(formRowNumber);
+  if (masterTarget >= 2) {
+    master.deleteRow(masterTarget);
+  }
+  if (formTarget >= 2) {
+    formSheet.deleteRow(formTarget);
   }
 
   syncFormResponsesToMaster();
   return {
     deleted: true,
-    sourceRow: formRowNumber
+    sourceRow: sourceRow
   };
 }
 
@@ -287,6 +304,39 @@ function deleteRowsDescending_(sheet, rowNumbers) {
   for (let i = 0; i < uniqueRows.length; i++) {
     sheet.deleteRow(uniqueRows[i]);
   }
+}
+
+function findDeleteTargetRow_(rows, headers, payload) {
+  const targetResponseKey = String(payload && payload.responseKey || "").trim();
+  const targetName = normalizeHeader_(payload && payload.fullName || "");
+  const targetMobile = normalizeHeader_(payload && payload.mobileNumber || "");
+  const targetAge = normalizeHeader_(payload && payload.age || "");
+  const targetSourceRow = Number(payload && payload.sourceRow || 0);
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    const rowName = normalizeHeader_(row[headers.fullName] || row[2] || "");
+    const rowMobile = normalizeHeader_(row[headers.mobileNumber] || row[5] || "");
+    const rowAge = normalizeHeader_(row[headers.age] || row[3] || "");
+    const rowResponseKey = String(row[headers.responseKey] || "").trim();
+    const rowSourceRow = Number(row[headers.sourceRow] || 0);
+
+    if (targetResponseKey && rowResponseKey && rowResponseKey === targetResponseKey) {
+      return i + 1;
+    }
+
+    if (targetName && targetMobile && targetAge) {
+      if (rowName === targetName && rowMobile === targetMobile && rowAge === targetAge) {
+        return i + 1;
+      }
+    }
+
+    if (targetSourceRow && rowSourceRow === targetSourceRow) {
+      return i + 1;
+    }
+  }
+
+  return -1;
 }
 
 function formResponsesSheet(ss) {

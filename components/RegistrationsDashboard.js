@@ -84,13 +84,7 @@ export default function RegistrationsDashboard() {
       .filter(Boolean);
     if (!terms.length) return annotatedRegistrations;
     return annotatedRegistrations.filter((row) => {
-      const fields = [
-        row.fullName,
-        row.mobileNumber,
-        row.age,
-        row.areaOfStay,
-        row.devoteeInTouch
-      ]
+      const fields = [row.fullName, row.mobileNumber]
         .map((item) => String(item || "").toLowerCase())
         .filter(Boolean);
 
@@ -217,7 +211,10 @@ export default function RegistrationsDashboard() {
     try {
       await fetchBridge("registrations.delete", {
         sourceRow: row.sourceRow,
-        responseKey: row.responseKey
+        responseKey: row.responseKey,
+        fullName: row.fullName,
+        mobileNumber: row.mobileNumber,
+        age: row.age
       });
       const registrationsPayload = await fetchBridge("registrations.list");
       const next = Array.isArray(registrationsPayload) ? registrationsPayload : [];
