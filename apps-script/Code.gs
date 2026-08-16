@@ -470,7 +470,7 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow) 
   }
 
   const record = existingRow && existingRow.length ? existingRow.slice() : [];
-  while (record.length < 16) record.push("");
+  while (record.length < 18) record.push("");
 
   record[0] = existingRow && existingRow[0] ? existingRow[0] : sourceRow;
   record[1] = sourceRow;
@@ -488,7 +488,8 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow) 
   record[13] = photoUpload;
   record[14] = existingRow && existingRow[14] ? String(existingRow[14]).trim() : "";
   record[15] = existingRow && existingRow[15] ? String(existingRow[15]).trim() : "";
-  record[16] = responseKey;
+  record[16] = existingRow && existingRow[16] ? String(existingRow[16]).trim() : "";
+  record[17] = responseKey;
   return record;
 }
 
@@ -951,7 +952,7 @@ function extractDriveFileId_(value) {
 function buildMasterRowIndex_(rows) {
   const index = {};
   for (let i = 1; i < rows.length; i++) {
-    const responseKey = String(rows[i][16] || "").trim();
+    const responseKey = String(rows[i][17] || "").trim();
     const sourceRow = Number(rows[i][1] || 0);
     const fullName = normalizeHeader_(rows[i][2] || "");
     const age = normalizeHeader_(rows[i][3] || "");
