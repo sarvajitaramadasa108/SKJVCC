@@ -77,20 +77,30 @@ export default function RegistrationsDashboard() {
   const annotatedRegistrations = useMemo(() => annotateDuplicateRegistrations(registrations), [registrations]);
 
   const filteredRegistrations = useMemo(() => {
-    const term = String(search || "").trim().toLowerCase();
-    if (!term) return annotatedRegistrations;
+    const terms = String(search || "")
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (!terms.length) return annotatedRegistrations;
     return annotatedRegistrations.filter((row) => {
-      const haystack = [
+      const fields = [
         row.fullName,
         row.mobileNumber,
+        row.age,
         row.areaOfStay,
-        row.assignedService,
-        row.assignedCategory,
         row.devoteeInTouch
       ]
         .map((item) => String(item || "").toLowerCase())
-        .join(" ");
-      return haystack.includes(term);
+        .filter(Boolean);
+
+      return terms.every((term) =>
+        fields.some((field) => {
+          if (!term) return false;
+          if (field.includes(term)) return true;
+          return field.split(/\s+/).some((part) => part === term);
+        })
+      );
     });
   }, [annotatedRegistrations, search]);
 
