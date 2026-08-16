@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, isAssignedRegistration, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -16,6 +16,7 @@ function emptyImage() {
 export default function ServiceWiseDashboard() {
   const [services, setServices] = useState([]);
   const [registrations, setRegistrations] = useState([]);
+  const [serviceRows, setServiceRows] = useState([]);
   const [selectedService, setSelectedService] = useState("");
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -67,10 +68,36 @@ export default function ServiceWiseDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    let alive = true;
+
+    async function loadServiceRows() {
+      if (!selectedService) {
+        setServiceRows([]);
+        return;
+      }
+      try {
+        const payload = await fetchBridge("registrations.byService", { serviceName: selectedService });
+        if (!alive) return;
+        setServiceRows(Array.isArray(payload) ? payload : []);
+      } catch (error) {
+        if (alive) {
+          setServiceRows([]);
+          setMessage(error.message || "Could not load service volunteers");
+        }
+      }
+    }
+
+    loadServiceRows();
+    return () => {
+      alive = false;
+    };
+  }, [selectedService]);
+
   const rows = useMemo(() => {
     if (!selectedService) return [];
-    return registrations.filter((row) => isAssignedRegistration(row) && String(row.assignedService || "").trim() === selectedService);
-  }, [registrations, selectedService]);
+    return serviceRows;
+  }, [serviceRows, selectedService]);
 
   const selectedMeta = useMemo(
     () => services.find((service) => service.serviceName === selectedService) || null,

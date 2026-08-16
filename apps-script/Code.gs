@@ -116,7 +116,7 @@ function registrationsByService(serviceName) {
   const target = String(serviceName || "").trim();
   if (!target) throw new Error("Select a service");
   return listRegistrations().filter(function (row) {
-    return String(row.assignedService || "").trim() === target;
+    return normalizeHeader_(row.assignedService || "") === normalizeHeader_(target);
   });
 }
 
