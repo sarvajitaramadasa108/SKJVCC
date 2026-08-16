@@ -591,15 +591,15 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
   const formAssignedCategory = readFormCell_(row, headers.formAssignedCategory, 10);
   const availability = parseAvailability_(availabilityForService);
   const assignedService = String(
-    formAssignedService ||
     (assignmentRecord && assignmentRecord.assignedService) ||
     (existingRow && existingRow[14]) ||
+    formAssignedService ||
     ""
   ).trim();
   const assignedCategory = String(
-    formAssignedCategory ||
     (assignmentRecord && assignmentRecord.assignedCategory) ||
     (existingRow && existingRow[15]) ||
+    formAssignedCategory ||
     ""
   ).trim();
   const assignmentUpdatedAt = String(
