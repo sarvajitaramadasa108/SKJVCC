@@ -1578,6 +1578,14 @@ button:disabled {
   color: var(--muted);
 }
 
+.loading-state-inline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 24px;
+}
+
 @media (max-width: 1100px) {
   .summary-strip,
   .service-meta {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, normalizeText, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -19,6 +19,7 @@ export default function ServiceWiseDashboard() {
   const [serviceRows, setServiceRows] = useState([]);
   const [selectedService, setSelectedService] = useState("");
   const [loading, setLoading] = useState(true);
+  const [serviceRowsLoading, setServiceRowsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [viewer, setViewer] = useState(emptyImage());
 
@@ -74,17 +75,30 @@ export default function ServiceWiseDashboard() {
     async function loadServiceRows() {
       if (!selectedService) {
         setServiceRows([]);
+        setServiceRowsLoading(false);
         return;
       }
+      setServiceRowsLoading(true);
+      setServiceRows([]);
+      setMessage("");
       try {
-        const payload = await fetchBridge("registrations.byService", { serviceName: selectedService });
+        const payload = await fetchBridge("registrations.list");
         if (!alive) return;
-        setServiceRows(Array.isArray(payload) ? payload : []);
+        const nextRows = (Array.isArray(payload) ? payload : []).filter(
+          (row) =>
+            normalizeText(row?.assignedService || "") === normalizeText(selectedService) &&
+            String(row?.assignedService || "").trim()
+        );
+        setRegistrations(Array.isArray(payload) ? payload : []);
+        writeCachedRows(Array.isArray(payload) ? payload : []);
+        setServiceRows(nextRows);
       } catch (error) {
         if (alive) {
           setServiceRows([]);
           setMessage(error.message || "Could not load service volunteers");
         }
+      } finally {
+        if (alive) setServiceRowsLoading(false);
       }
     }
 
@@ -166,14 +180,14 @@ export default function ServiceWiseDashboard() {
 
       <section className="panel">
         <div className="form-grid compact-form">
-          <label className="field wide">
-            <span>Service</span>
-            <select value={selectedService} onChange={(event) => setSelectedService(event.target.value)}>
-              <option value="">Select a service</option>
-              {services.map((service) => (
-                <option key={service.serviceName} value={service.serviceName}>
-                  {service.serviceName}
-                </option>
+            <label className="field wide">
+              <span>Service</span>
+              <select value={selectedService} onChange={(event) => setSelectedService(event.target.value)}>
+                <option value="">Select a service</option>
+                {services.map((service) => (
+                  <option key={service.serviceName} value={service.serviceName}>
+                    {service.serviceName}
+                  </option>
               ))}
             </select>
           </label>
@@ -222,6 +236,13 @@ export default function ServiceWiseDashboard() {
 
         {!selectedService ? (
           <div className="empty-state">Choose a service to load the assigned volunteers.</div>
+        ) : serviceRowsLoading ? (
+          <div className="empty-state">
+            <div className="loading-state-inline">
+              <span className="loading-spinner" aria-hidden="true" />
+              <span>Loading assigned volunteers...</span>
+            </div>
+          </div>
         ) : rows.length ? (
           <div className="stack">
             <div className="table-wrap">

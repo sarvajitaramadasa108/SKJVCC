@@ -11,12 +11,26 @@ const AVAILABILITY_COLUMNS = [
   "6th September (Full day:- 9am to 9pm)"
 ];
 
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doGet(e) {
   return handleRequest_(String(e && e.parameter && e.parameter.action || "registrations.list"), e ? e.parameter : {}, null);
 }
 
 function doPost(e) {
-  const body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+  let body = {};
+  try {
+    body = JSON.parse((e && e.postData && e.postData.contents) || "{}");
+  } catch (error) {
+    return jsonResponse({
+      ok: false,
+      error: "Invalid JSON payload"
+    });
+  }
   return handleRequest_(String(body.action || "registrations.list"), body, e);
 }
 
@@ -1215,10 +1229,4 @@ function buildVolunteerFingerprint_(fullName, mobileNumber, age) {
   const volunteerAge = normalizeHeader_(age);
   if (!name || !mobile || !volunteerAge) return "";
   return name + "||" + mobile + "||" + volunteerAge;
-}
-
-function jsonResponse(data) {
-  return ContentService
-    .createTextOutput(JSON.stringify(data))
-    .setMimeType(ContentService.MimeType.JSON);
 }
