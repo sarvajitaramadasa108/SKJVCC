@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildExcelDownload, buildImageUrl, isAssignedRegistration, readJsonResponse } from "@/components/registryUtils";
 import PortalNav from "@/components/PortalNav";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -69,7 +69,7 @@ export default function ServiceWiseDashboard() {
 
   const rows = useMemo(() => {
     if (!selectedService) return [];
-    return registrations.filter((row) => String(row.assignedService || "").trim() === selectedService);
+    return registrations.filter((row) => isAssignedRegistration(row) && String(row.assignedService || "").trim() === selectedService);
   }, [registrations, selectedService]);
 
   const selectedMeta = useMemo(

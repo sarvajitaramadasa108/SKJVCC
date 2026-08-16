@@ -66,6 +66,13 @@ export function annotateDuplicateRegistrations(rows) {
   });
 }
 
+export function isAssignedRegistration(row) {
+  const assignedFlag = normalizeText(row?.assignmentFlag || row?.assignedFlag || row?.assignmentStatus);
+  const assignedService = normalizeExactText(row?.assignedService);
+  const assignedCategory = normalizeExactText(row?.assignedCategory);
+  return assignedFlag === "yes" || assignedFlag === "assigned" || assignedFlag === "true" || Boolean(assignedService && assignedCategory);
+}
+
 export function mergeRegistrationRecord(rows, updatedRow) {
   const list = Array.isArray(rows) ? rows : [];
   if (!updatedRow || typeof updatedRow !== "object") {

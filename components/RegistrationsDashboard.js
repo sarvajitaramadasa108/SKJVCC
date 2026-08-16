@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_COLUMNS, annotateDuplicateRegistrations, buildImageUrl, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, annotateDuplicateRegistrations, buildImageUrl, isAssignedRegistration, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
 import ServiceDropdown from "@/components/ServiceDropdown";
 import PortalNav from "@/components/PortalNav";
 
@@ -100,7 +100,7 @@ export default function RegistrationsDashboard() {
   }, [annotatedRegistrations, search]);
 
   const liveRegistrations = useMemo(
-    () => filteredRegistrations.filter((row) => !String(row.assignedService || "").trim()),
+    () => filteredRegistrations.filter((row) => !isAssignedRegistration(row)),
     [filteredRegistrations]
   );
 
@@ -145,7 +145,7 @@ export default function RegistrationsDashboard() {
   }, [columnFilters, liveRegistrations]);
 
   const totals = useMemo(() => {
-    const assigned = registrations.filter((row) => String(row.assignedService || "").trim()).length;
+    const assigned = registrations.filter((row) => isAssignedRegistration(row)).length;
     return {
       total: registrations.length,
       assigned,
@@ -224,7 +224,8 @@ export default function RegistrationsDashboard() {
       const savedRegistration = response?.registration || {
         ...row,
         assignedService: serviceName,
-        assignedCategory: category || row.assignedCategory || ""
+        assignedCategory: category || row.assignedCategory || "",
+        assignmentFlag: "Yes"
       };
       const nextRegistrations = mergeRegistrationRecord(registrations, savedRegistration);
       setRegistrations(nextRegistrations);

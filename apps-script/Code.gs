@@ -129,6 +129,7 @@ function assignService(payload) {
   const sheet = masterSheet(ss);
   const serviceSheetData = serviceSheet(ss);
   const assignment = assignmentSheet(ss);
+  ensureMasterHeader(sheet);
   ensureServiceHeader(serviceSheetData);
   ensureAssignmentHeader(assignment);
   const rows = sheet.getDataRange().getValues();
@@ -150,6 +151,7 @@ function assignService(payload) {
   const nextCategory = category || previousCategory;
   current[headers.assignedService] = serviceName;
   current[headers.assignedCategory] = nextCategory;
+  current[headers.assignmentFlag] = "Yes";
   current[headers.assignmentUpdatedAt] = formatNow_();
   sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
   updateServiceAllocationCount_(serviceSheetData, previousService, previousCategory, -1);
@@ -162,6 +164,7 @@ function assignService(payload) {
     mobileNumber: String(current[headers.mobileNumber] || "").trim(),
     assignedService: serviceName,
     assignedCategory: nextCategory,
+    assignedFlag: "Yes",
     updatedAt: current[headers.assignmentUpdatedAt]
   });
   SpreadsheetApp.flush();
@@ -186,6 +189,7 @@ function resetAssignments() {
     for (let i = 1; i < masterValues.length; i++) {
       masterValues[i][headers.assignedService] = "";
       masterValues[i][headers.assignedCategory] = "";
+      masterValues[i][headers.assignmentFlag] = "";
       masterValues[i][headers.assignmentUpdatedAt] = "";
     }
     master.getRange(2, 1, masterValues.length - 1, masterValues[0].length).setValues(masterValues.slice(1));
@@ -460,6 +464,7 @@ function ensureMasterHeader(sheet) {
     "Photo upload",
     "Assigned Service",
     "Assigned Category",
+    "Assignment Flag",
     "Assignment Updated At",
     "Response Key"
   ];
@@ -468,13 +473,8 @@ function ensureMasterHeader(sheet) {
     const normalized = currentHeaders.map(function (cell) {
       return normalizeHeader_(cell);
     });
-    if (normalized.indexOf("assigned category") === -1) {
-      const assignmentHeaderIndex = normalized.indexOf("assignment updated at");
-      if (assignmentHeaderIndex >= 0) {
-        sheet.insertColumnBefore(assignmentHeaderIndex + 1);
-      } else if (sheet.getLastColumn() < headers.length) {
-        sheet.insertColumnBefore(sheet.getLastColumn() + 1);
-      }
+    if (normalized.indexOf("assignment flag") === -1 && sheet.getLastColumn() < headers.length) {
+      sheet.insertColumnAfter(sheet.getLastColumn());
     }
   }
   ensureHeaders_(sheet, headers);
@@ -570,6 +570,12 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
     (existingRow && existingRow[16]) ||
     ""
   ).trim();
+  const assignedFlag = String(
+    (assignmentRecord && assignmentRecord.assignedFlag) ||
+    (existingRow && existingRow[18]) ||
+    ((assignmentRecord && assignmentRecord.assignedService && assignmentRecord.assignedCategory) ? "Yes" : "") ||
+    (assignedService && assignedCategory ? "Yes" : "")
+  ).trim();
   const responseKeyValue = String(
     (assignmentRecord && assignmentRecord.responseKey) ||
     responseKey ||
@@ -586,7 +592,7 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
   }
 
   const record = existingRow && existingRow.length ? existingRow.slice() : [];
-  while (record.length < 18) record.push("");
+  while (record.length < 19) record.push("");
 
   record[0] = existingRow && existingRow[0] ? existingRow[0] : sourceRow;
   record[1] = sourceRow;
@@ -606,6 +612,7 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
   record[15] = assignedCategory;
   record[16] = assignmentUpdatedAt;
   record[17] = responseKeyValue;
+  record[18] = assignedFlag;
   return record;
 }
 
@@ -799,8 +806,10 @@ function mapMasterRow_(row, headers, rowNumber) {
     photoUpload: String(row[headers.photoUpload] || "").trim(),
     assignedService: String(row[headers.assignedService] || "").trim(),
     assignedCategory: String(row[headers.assignedCategory] || "").trim(),
+    assignmentFlag: String(row[headers.assignmentFlag] || "").trim(),
     assignmentUpdatedAt: String(row[headers.assignmentUpdatedAt] || "").trim(),
-    responseKey: String(row[headers.responseKey] || "").trim()
+    responseKey: String(row[headers.responseKey] || "").trim(),
+    isAssigned: isAssignedRow_(row, headers)
   };
 }
 
@@ -824,6 +833,7 @@ function buildHeaderMap(headerRow) {
     assignedService: findHeaderIndex_(normalized, ["assigned service", "service"]),
     assignmentUpdatedAt: findHeaderIndex_(normalized, ["assignment updated at"]),
     responseKey: findHeaderIndex_(normalized, ["response key"]),
+    assignmentFlag: findHeaderIndex_(normalized, ["assignment flag", "assigned flag", "assignment status"]),
     serviceName: findHeaderIndex_(normalized, ["service name"]),
     coordinatorName: findHeaderIndex_(normalized, ["coordinator name", "service coordinator"]),
     contactNumber: findHeaderIndex_(normalized, ["coordinator contact number", "contact number"]),
@@ -978,6 +988,14 @@ function isHeaderLikeRecord_(row) {
   });
 }
 
+function isAssignedRow_(row, headers) {
+  const flag = normalizeHeader_(row[headers.assignmentFlag] || row[18] || "");
+  if (flag === "yes" || flag === "assigned" || flag === "true") return true;
+  const assignedService = String(row[headers.assignedService] || "").trim();
+  const assignedCategory = String(row[headers.assignedCategory] || "").trim();
+  return Boolean(assignedService && assignedCategory);
+}
+
 function pruneInvalidMasterRows_(sheet, rows, headers) {
   const rowsToDelete = [];
   for (let i = 1; i < rows.length; i++) {
@@ -1108,6 +1126,7 @@ function mapAssignmentRow_(row, rowNumber) {
     mobileNumber: String(row[4] || "").trim(),
     assignedService: String(row[5] || "").trim(),
     assignedCategory: String(row[6] || "").trim(),
+    assignedFlag: "Yes",
     updatedAt: String(row[7] || "").trim()
   };
 }

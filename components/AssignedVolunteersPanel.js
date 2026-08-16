@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { AVAILABILITY_COLUMNS, buildImageUrl, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
+import { AVAILABILITY_COLUMNS, buildImageUrl, isAssignedRegistration, mergeRegistrationRecord, readJsonResponse } from "@/components/registryUtils";
 import ServiceDropdown from "@/components/ServiceDropdown";
 
 const REQUEST_TIMEOUT_MS = 120000;
@@ -69,7 +69,7 @@ export default function AssignedVolunteersPanel() {
   }, []);
 
   const assignedRegistrations = useMemo(
-    () => registrations.filter((row) => String(row.assignedService || "").trim()),
+    () => registrations.filter((row) => isAssignedRegistration(row)),
     [registrations]
   );
 
@@ -165,7 +165,8 @@ export default function AssignedVolunteersPanel() {
       const savedRegistration = response?.registration || {
         ...row,
         assignedService: serviceName,
-        assignedCategory: category || row.assignedCategory || ""
+        assignedCategory: category || row.assignedCategory || "",
+        assignmentFlag: "Yes"
       };
       const nextRegistrations = mergeRegistrationRecord(registrations, savedRegistration);
       const servicesPayload = await fetchBridge("services.list");
