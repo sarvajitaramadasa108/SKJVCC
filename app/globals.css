@@ -988,7 +988,7 @@ button:disabled {
 }
 
 .status-cell strong {
-  font-size: 13px;
+  font-size: 14px;
 }
 
 .status-cell-folk {
@@ -1038,15 +1038,15 @@ button:disabled {
 
 .status-input {
   display: block;
-  width: 100%;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 34px;
-  padding: 7px 8px;
+  width: 72px;
+  min-width: 72px;
+  max-width: 72px;
+  min-height: 36px;
+  padding: 6px 8px;
   border-radius: 10px;
   border: 1px solid rgba(112, 76, 36, 0.18);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   color: #111827;
   text-align: center;
