@@ -60,8 +60,15 @@ function syncFormResponsesToMaster() {
     const sourceRow = i + 1;
     const row = values[i];
     if (isFormHeaderRow_(row)) continue;
+    const mobileNumber = readFormCell_(row, formHeaders.mobileNumber, 4);
+    const fullName = readFormCell_(row, formHeaders.fullName, 1);
+    const age = readFormCell_(row, formHeaders.age, 2);
     const responseKey = buildResponseKey_(row);
-    const existingRow = masterIndex[responseKey] || masterIndex["source:" + sourceRow];
+    const existingRow =
+      masterIndex[responseKey] ||
+      masterIndex["source:" + sourceRow] ||
+      masterIndex["mobile:" + normalizeMobile(mobileNumber)] ||
+      masterIndex["finger:" + buildVolunteerFingerprint_(fullName, mobileNumber, age)];
     const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow);
     if (!record) continue;
     upsertMasterRow_(master, record, existingRow);
@@ -938,8 +945,14 @@ function buildMasterRowIndex_(rows) {
   for (let i = 1; i < rows.length; i++) {
     const responseKey = String(rows[i][16] || "").trim();
     const sourceRow = Number(rows[i][1] || 0);
+    const fullName = normalizeHeader_(rows[i][2] || "");
+    const age = normalizeHeader_(rows[i][3] || "");
+    const mobileNumber = normalizeMobile(rows[i][5] || "");
     if (responseKey) index[responseKey] = i + 1;
     if (sourceRow) index["source:" + sourceRow] = i + 1;
+    if (mobileNumber) index["mobile:" + mobileNumber] = i + 1;
+    const fingerprint = buildVolunteerFingerprint_(fullName, mobileNumber, age);
+    if (fingerprint) index["finger:" + fingerprint] = i + 1;
   }
   return index;
 }
@@ -956,6 +969,14 @@ function findMasterRowBySourceRow_(rows, sourceRow) {
 
 function formatNow_() {
   return Utilities.formatDate(new Date(), Session.getScriptTimeZone() || "Asia/Calcutta", "yyyy-MM-dd HH:mm:ss");
+}
+
+function buildVolunteerFingerprint_(fullName, mobileNumber, age) {
+  const name = normalizeHeader_(fullName);
+  const mobile = normalizeMobile(mobileNumber);
+  const volunteerAge = normalizeHeader_(age);
+  if (!name || !mobile || !volunteerAge) return "";
+  return name + "||" + mobile + "||" + volunteerAge;
 }
 
 function jsonResponse(data) {
