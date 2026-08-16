@@ -74,14 +74,10 @@ function syncFormResponsesToMaster() {
     const responseKey = buildResponseKey_(row);
     const assignmentRecord =
       assignmentIndex[responseKey] ||
-      assignmentIndex["source:" + sourceRow] ||
-      assignmentIndex["mobile:" + normalizeMobile(mobileNumber)] ||
-      assignmentIndex["finger:" + buildVolunteerFingerprint_(fullName, mobileNumber, age)];
+      assignmentIndex["source:" + sourceRow];
     const existingRow =
       masterIndex[responseKey] ||
-      masterIndex["source:" + sourceRow] ||
-      masterIndex["mobile:" + normalizeMobile(mobileNumber)] ||
-      masterIndex["finger:" + buildVolunteerFingerprint_(fullName, mobileNumber, age)];
+      masterIndex["source:" + sourceRow];
     const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow, assignmentRecord);
     if (!record) continue;
     upsertMasterRow_(master, record, existingRow);
@@ -1088,14 +1084,8 @@ function buildMasterRowIndex_(rows) {
   for (let i = 1; i < rows.length; i++) {
     const responseKey = String(rows[i][17] || "").trim();
     const sourceRow = Number(rows[i][1] || 0);
-    const fullName = normalizeHeader_(rows[i][2] || "");
-    const age = normalizeHeader_(rows[i][3] || "");
-    const mobileNumber = normalizeMobile(rows[i][5] || "");
     if (responseKey) index[responseKey] = i + 1;
     if (sourceRow) index["source:" + sourceRow] = i + 1;
-    if (mobileNumber) index["mobile:" + mobileNumber] = i + 1;
-    const fingerprint = buildVolunteerFingerprint_(fullName, mobileNumber, age);
-    if (fingerprint) index["finger:" + fingerprint] = i + 1;
   }
   return index;
 }
@@ -1108,10 +1098,6 @@ function buildAssignmentRowIndex_(rows) {
     if (!record) continue;
     if (record.responseKey) index[record.responseKey] = record;
     if (record.sourceRow) index["source:" + record.sourceRow] = record;
-    const mobileNumber = normalizeMobile(record.mobileNumber);
-    if (mobileNumber) index["mobile:" + mobileNumber] = record;
-    const fingerprint = buildVolunteerFingerprint_(record.fullName, mobileNumber, record.age);
-    if (fingerprint) index["finger:" + fingerprint] = record;
   }
   return index;
 }
@@ -1163,21 +1149,13 @@ function deleteAssignmentRecord_(sheet, criteria) {
 function findAssignmentRowIndex_(rows, criteria) {
   const responseKey = String(criteria && criteria.responseKey || "").trim();
   const sourceRow = Number(criteria && criteria.sourceRow || 0);
-  const fullName = normalizeHeader_(criteria && criteria.fullName || "");
-  const mobileNumber = normalizeMobile(criteria && criteria.mobileNumber || "");
-  const age = normalizeHeader_(criteria && criteria.age || "");
 
   for (let i = 1; i < rows.length; i++) {
     const rowResponseKey = String(rows[i][0] || "").trim();
     const rowSourceRow = Number(rows[i][1] || 0);
-    const rowName = normalizeHeader_(rows[i][2] || "");
-    const rowAge = normalizeHeader_(rows[i][3] || "");
-    const rowMobile = normalizeMobile(rows[i][4] || "");
 
     if (responseKey && rowResponseKey && rowResponseKey === responseKey) return i + 1;
     if (sourceRow && rowSourceRow && rowSourceRow === sourceRow) return i + 1;
-    if (mobileNumber && rowMobile && rowMobile === mobileNumber && (!fullName || rowName === fullName) && (!age || rowAge === age)) return i + 1;
-    if (fullName && mobileNumber && age && rowName === fullName && rowMobile === mobileNumber && rowAge === age) return i + 1;
   }
 
   return -1;
