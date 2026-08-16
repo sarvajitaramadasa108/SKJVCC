@@ -533,6 +533,11 @@ button:disabled {
   line-height: 1.28;
 }
 
+.status-table th,
+.status-table td {
+  padding: 8px 4px;
+}
+
 .live-registrations-table th:nth-child(1),
 .live-registrations-table td:nth-child(1),
 .assigned-volunteers-table th:nth-child(1),
@@ -1038,15 +1043,15 @@ button:disabled {
 
 .status-input {
   display: block;
-  width: 72px;
-  min-width: 72px;
-  max-width: 72px;
-  min-height: 36px;
-  padding: 6px 8px;
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  min-height: 32px;
+  padding: 4px 6px;
   border-radius: 10px;
   border: 1px solid rgba(112, 76, 36, 0.18);
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.94));
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 800;
   color: #111827;
   text-align: center;
