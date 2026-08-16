@@ -27,6 +27,7 @@ function route(action, payload) {
   if (action === "registrations.list") return { ok: true, data: listRegistrations() };
   if (action === "registrations.byService") return { ok: true, data: registrationsByService(payload.serviceName) };
   if (action === "registrations.assignService") return { ok: true, data: assignService(payload) };
+  if (action === "registrations.delete") return { ok: true, data: deleteRegistration(payload) };
   if (action === "registrations.photo") return { ok: true, data: getRegistrationPhoto(payload) };
   return { ok: false, error: "Unknown action: " + action };
 }
@@ -76,6 +77,10 @@ function syncFormResponsesToMaster() {
 function listRegistrations() {
   syncFormResponsesToMaster();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const removed = cleanupRegistrationRowsByNames_(ss, ["ydrd", "test"]);
+  if (removed > 0) {
+    syncFormResponsesToMaster();
+  }
   const sheet = masterSheet(ss);
   const rows = sheet.getDataRange().getValues();
   if (rows.length < 2) return [];
@@ -129,6 +134,39 @@ function assignService(payload) {
 
   return {
     registration: mapMasterRow_(current, headers, targetRow)
+  };
+}
+
+function deleteRegistration(payload) {
+  const sourceRow = Number(payload.sourceRow || 0);
+  const responseKey = String(payload.responseKey || "").trim();
+  if (!sourceRow && !responseKey) throw new Error("Registration not found");
+
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const master = masterSheet(ss);
+  const formSheet = formResponsesSheet(ss);
+  ensureMasterHeader(master);
+
+  const masterRows = master.getDataRange().getValues();
+  if (masterRows.length < 2) throw new Error("No registrations found");
+
+  const masterIndex = buildMasterRowIndex_(masterRows);
+  const targetRow = (responseKey && masterIndex[responseKey]) || findMasterRowBySourceRow_(masterRows, sourceRow);
+  if (targetRow < 2) throw new Error("Registration not found");
+
+  const headers = buildHeaderMap(masterRows[0]);
+  const row = masterRows[targetRow - 1];
+  const formRowNumber = Number(row[headers.sourceRow] || sourceRow || 0);
+
+  master.deleteRow(targetRow);
+  if (formRowNumber >= 2 && formRowNumber <= formSheet.getLastRow()) {
+    formSheet.deleteRow(formRowNumber);
+  }
+
+  syncFormResponsesToMaster();
+  return {
+    deleted: true,
+    sourceRow: formRowNumber
   };
 }
 
@@ -199,6 +237,56 @@ function listServices() {
   }
 
   return result;
+}
+
+function cleanupRegistrationRowsByNames_(ss, names) {
+  const targets = {};
+  for (let i = 0; i < names.length; i++) {
+    const key = normalizeHeader_(names[i]);
+    if (key) targets[key] = true;
+  }
+  if (!Object.keys(targets).length) return 0;
+
+  const master = masterSheet(ss);
+  const formSheet = formResponsesSheet(ss);
+  const rows = master.getDataRange().getValues();
+  if (rows.length < 2) return 0;
+
+  const headers = buildHeaderMap(rows[0]);
+  const masterRowsToDelete = [];
+  const formRowsToDelete = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const fullName = normalizeHeader_(rows[i][headers.fullName] || rows[i][2] || "");
+    if (!targets[fullName]) continue;
+    masterRowsToDelete.push(i + 1);
+    const sourceRow = Number(rows[i][headers.sourceRow] || 0);
+    if (sourceRow >= 2) formRowsToDelete.push(sourceRow);
+  }
+
+  deleteRowsDescending_(master, masterRowsToDelete);
+  deleteRowsDescending_(formSheet, formRowsToDelete);
+  return masterRowsToDelete.length;
+}
+
+function deleteRowsDescending_(sheet, rowNumbers) {
+  const uniqueRows = Array.from(
+    new Set(
+      (rowNumbers || [])
+        .map(function (rowNumber) {
+          return Number(rowNumber || 0);
+        })
+        .filter(function (rowNumber) {
+          return rowNumber >= 2;
+        })
+    )
+  ).sort(function (left, right) {
+    return right - left;
+  });
+
+  for (let i = 0; i < uniqueRows.length; i++) {
+    sheet.deleteRow(uniqueRows[i]);
+  }
 }
 
 function formResponsesSheet(ss) {

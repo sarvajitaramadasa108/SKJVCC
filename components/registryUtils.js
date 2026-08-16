@@ -38,6 +38,34 @@ export function dedupeRegistrations(rows) {
   return deduped;
 }
 
+export function annotateDuplicateRegistrations(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  const counts = new Map();
+
+  for (const row of list) {
+    const fullName = normalizeExactText(row?.fullName);
+    const mobileNumber = normalizeExactText(row?.mobileNumber);
+    const age = normalizeExactText(row?.age);
+    if (!fullName || !mobileNumber || !age) continue;
+    const key = `${fullName}||${mobileNumber}||${age}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  }
+
+  return list.map((row) => {
+    const fullName = normalizeExactText(row?.fullName);
+    const mobileNumber = normalizeExactText(row?.mobileNumber);
+    const age = normalizeExactText(row?.age);
+    const key = fullName && mobileNumber && age ? `${fullName}||${mobileNumber}||${age}` : "";
+    const duplicateCount = key ? counts.get(key) || 0 : 0;
+    return {
+      ...row,
+      duplicateKey: key,
+      duplicateCount,
+      isDuplicate: duplicateCount > 1
+    };
+  });
+}
+
 export function availabilityFlags(value) {
   const normalized = normalizeText(value);
   return AVAILABILITY_COLUMNS.map((column) => ({
