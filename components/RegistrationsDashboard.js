@@ -168,26 +168,16 @@ export default function RegistrationsDashboard() {
     setSavingRow(row.sourceRow);
     setMessage("");
     try {
-      const payload = await fetchBridge("registrations.assignService", {
+      await fetchBridge("registrations.assignService", {
         sourceRow: row.sourceRow,
         mobileNumber: row.mobileNumber,
         serviceName,
         category
       });
-      const updated = payload?.registration || null;
-      if (updated) {
-        setRegistrations((current) =>
-          current.map((item) => (item.sourceRow === row.sourceRow ? updated : item))
-        );
-      } else {
-        setRegistrations((current) =>
-          current.map((item) =>
-            item.sourceRow === row.sourceRow
-              ? { ...item, assignedService: serviceName, assignedCategory: category }
-              : item
-          )
-        );
-      }
+      const registrationsPayload = await fetchBridge("registrations.list");
+      const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
+      setRegistrations(nextRegistrations);
+      cacheJson("skjvcc_registrations_cache", nextRegistrations);
       setAssignmentDrafts((current) => {
         const next = { ...current };
         delete next[row.sourceRow];

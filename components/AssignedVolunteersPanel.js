@@ -151,28 +151,22 @@ export default function AssignedVolunteersPanel() {
     setSavingRow(row.sourceRow);
     setMessage("");
     try {
-      const payload = await fetchBridge("registrations.assignService", {
+      await fetchBridge("registrations.assignService", {
         sourceRow: row.sourceRow,
         mobileNumber: row.mobileNumber,
         serviceName,
         category
       });
-      const updated = payload?.registration || null;
-      if (updated) {
-      setRegistrations((current) =>
-          dedupeRegistrations(current.map((item) => (item.sourceRow === row.sourceRow ? updated : item)))
-        );
-      } else {
-        setRegistrations((current) =>
-          dedupeRegistrations(
-            current.map((item) =>
-              item.sourceRow === row.sourceRow
-                ? { ...item, assignedService: serviceName, assignedCategory: category }
-                : item
-            )
-          )
-        );
-      }
+      const [registrationsPayload, servicesPayload] = await Promise.all([
+        fetchBridge("registrations.list"),
+        fetchBridge("services.list")
+      ]);
+      const nextRegistrations = dedupeRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
+      const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
+      setRegistrations(nextRegistrations);
+      setServices(nextServices);
+      cacheJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
+      cacheJson(SERVICES_CACHE_KEY, nextServices);
       setEditingRow(null);
       setAssignmentDrafts((current) => {
         const next = { ...current };
