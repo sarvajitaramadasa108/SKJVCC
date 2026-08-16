@@ -105,7 +105,9 @@ function syncFormResponsesToMaster() {
       masterIndex["source:" + sourceRow];
     const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow, assignmentRecord);
     if (!record) continue;
-    upsertMasterRow_(master, record, existingRow);
+    const masterRecord = record.slice();
+    masterRecord[14] = "";
+    upsertMasterRow_(master, masterRecord, existingRow);
     const writtenRow = existingRow || master.getLastRow();
     masterIndex[responseKey] = writtenRow;
     masterIndex["source:" + sourceRow] = writtenRow;
@@ -175,10 +177,17 @@ function assignService(payload) {
   if (targetRow < 2) throw new Error("Registration not found");
 
   const current = rows[targetRow - 1];
-  const previousService = String(current[headers.assignedService] || "").trim();
-  const previousCategory = String(current[headers.assignedCategory] || "").trim();
+  const assignmentRows = assignment.getDataRange().getValues();
+  const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
+  const responseKey = String(current[headers.responseKey] || "").trim();
+  const previousAssignment =
+    assignmentIndex[responseKey] ||
+    assignmentIndex["source:" + sourceRow] ||
+    null;
+  const previousService = String(previousAssignment && previousAssignment.assignedService || "").trim();
+  const previousCategory = String(previousAssignment && previousAssignment.assignedCategory || "").trim();
   const nextCategory = category || previousCategory;
-  current[headers.assignedService] = serviceName;
+  current[headers.assignedService] = "";
   current[headers.assignedCategory] = nextCategory;
   current[headers.assignmentFlag] = "Yes";
   current[headers.assignmentUpdatedAt] = formatNow_();
@@ -199,7 +208,12 @@ function assignService(payload) {
   SpreadsheetApp.flush();
 
   return {
-    registration: mapMasterRow_(current, headers, targetRow)
+    registration: Object.assign({}, mapMasterRow_(current, headers, targetRow), {
+      assignedService: serviceName,
+      assignedCategory: nextCategory,
+      assignmentFlag: "Yes",
+      assignmentUpdatedAt: current[headers.assignmentUpdatedAt]
+    })
   };
 }
 
