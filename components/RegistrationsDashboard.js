@@ -104,6 +104,27 @@ export default function RegistrationsDashboard() {
     [filteredRegistrations]
   );
 
+  const devoteeInTouchOptions = useMemo(() => {
+    const seen = new Map();
+    const sourceRows = registrations.filter((row) => !isAssignedRegistration(row));
+
+    for (const row of sourceRows) {
+      const label = String(row.devoteeInTouch || "").trim();
+      if (!label) continue;
+      const key = label.toLowerCase();
+      if (!seen.has(key)) {
+        seen.set(key, label);
+      }
+    }
+
+    return Array.from(seen.values()).sort((left, right) =>
+      left.localeCompare(right, undefined, {
+        sensitivity: "base",
+        numeric: true
+      })
+    );
+  }, [registrations]);
+
   const liveFilteredRegistrations = useMemo(() => {
     const filters = columnFilters;
     const textFilterFields = [
@@ -121,7 +142,11 @@ export default function RegistrationsDashboard() {
         const filterValue = normalizeFilterValue(filters[field.key]);
         if (!filterValue) continue;
         const rowValue = String(field.value(row) || "").toLowerCase();
-        if (!rowValue.includes(filterValue)) return false;
+        if (field.key === "devoteeInTouch") {
+          if (rowValue !== filterValue) return false;
+        } else if (!rowValue.includes(filterValue)) {
+          return false;
+        }
       }
 
       for (let i = 0; i < AVAILABILITY_COLUMNS.length; i++) {
@@ -396,14 +421,20 @@ export default function RegistrationsDashboard() {
                     />
                   </th>
                   <th>
-                    <input
-                      className="table-filter-input"
+                    <select
+                      className="table-filter-select"
                       value={columnFilters.devoteeInTouch || ""}
                       onChange={(event) =>
                         setColumnFilters((current) => ({ ...current, devoteeInTouch: event.target.value }))
                       }
-                      placeholder="Filter"
-                    />
+                    >
+                      <option value="">All</option>
+                      {devoteeInTouchOptions.map((value) => (
+                        <option key={value} value={value}>
+                          {value}
+                        </option>
+                      ))}
+                    </select>
                   </th>
                   <th>
                     <input
