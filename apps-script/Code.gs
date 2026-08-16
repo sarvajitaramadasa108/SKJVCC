@@ -546,17 +546,21 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
   const age = readFormCell_(row, headers.age, 2);
   const gender = readFormCell_(row, headers.gender, 3);
   const mobileNumber = readFormCell_(row, headers.mobileNumber, 4);
-  const devoteeInTouch = readFormCell_(row, headers.devoteeInTouch, 5);
-  const areaOfStay = readFormCell_(row, headers.areaOfStay, 6);
-  const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 7);
-  const photoUpload = readFormCell_(row, headers.photoUpload, 8);
+  const devoteeInTouch = readFormCell_(row, headers.devoteeInTouch, 6);
+  const areaOfStay = readFormCell_(row, headers.areaOfStay, 7);
+  const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 8);
+  const photoUpload = readFormCell_(row, headers.photoUpload, 9);
+  const formAssignedService = readFormCell_(row, headers.formAssignedService, 10);
+  const formAssignedCategory = readFormCell_(row, headers.formAssignedCategory, 11);
   const availability = parseAvailability_(availabilityForService);
   const assignedService = String(
+    formAssignedService ||
     (assignmentRecord && assignmentRecord.assignedService) ||
     (existingRow && existingRow[14]) ||
     ""
   ).trim();
   const assignedCategory = String(
+    formAssignedCategory ||
     (assignmentRecord && assignmentRecord.assignedCategory) ||
     (existingRow && existingRow[15]) ||
     ""
@@ -822,10 +826,15 @@ function buildHeaderMap(headerRow) {
     age: findHeaderIndex_(normalized, ["age"]),
     gender: findHeaderIndex_(normalized, ["gender"]),
     mobileNumber: findHeaderIndex_(normalized, ["mobile number", "mobile", "phone number"]),
-    devoteeInTouch: findHeaderIndex_(normalized, ["devotee in touch"]),
+    devoteeInTouch: findHeaderIndex_(normalized, [
+      "devotee in touch",
+      "devotee in touch kindly mention name of devotee you are in touch"
+    ]),
     areaOfStay: findHeaderIndex_(normalized, ["area of staying in vizag", "area of stay"]),
     availabilityForService: findHeaderIndex_(normalized, ["availability for service"]),
     photoUpload: findHeaderIndex_(normalized, ["photo upload", "photo"]),
+    formAssignedService: findHeaderIndex_(normalized, ["service assigned", "assigned service"]),
+    formAssignedCategory: findHeaderIndex_(normalized, ["category", "assigned category"]),
     assignedService: findHeaderIndex_(normalized, ["assigned service", "service"]),
     assignmentUpdatedAt: findHeaderIndex_(normalized, ["assignment updated at"]),
     responseKey: findHeaderIndex_(normalized, ["response key"]),
