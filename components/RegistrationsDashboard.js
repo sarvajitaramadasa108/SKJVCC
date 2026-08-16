@@ -283,6 +283,15 @@ export default function RegistrationsDashboard() {
         mobileNumber: row.mobileNumber,
         age: row.age
       });
+      setRegistrations((current) =>
+        annotateDuplicateRegistrations(
+          current.filter((item) => {
+            const sameSource = Number(item?.sourceRow || 0) === Number(row.sourceRow || 0);
+            const sameResponseKey = String(item?.responseKey || "").trim() === String(row.responseKey || "").trim();
+            return !(sameSource || sameResponseKey);
+          })
+        )
+      );
       const registrationsPayload = await fetchBridge("registrations.list");
       const next = Array.isArray(registrationsPayload) ? registrationsPayload : [];
       setRegistrations(next);
