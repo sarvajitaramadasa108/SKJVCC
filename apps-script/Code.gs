@@ -88,7 +88,7 @@ function syncFormResponsesToMaster() {
     const row = values[i];
     if (isFormHeaderRow_(row)) continue;
     const responseKey = buildResponseKey_(row);
-    const assignmentRecord = assignmentIndex[responseKey];
+    const assignmentRecord = assignmentIndex[responseKey] || assignmentIndex["source:" + (i + 1)] || null;
     if (!assignmentRecord) continue;
     const nextRecord = buildAssignmentRecordFromFormRow_(row, formHeaders, assignmentRecord);
     if (!nextRecord) continue;
@@ -128,24 +128,14 @@ function listRegistrations() {
 function listAssignedRegistrations() {
   syncFormResponsesToMaster();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const formSheet = formResponsesSheet(ss);
   const assignment = assignmentSheet(ss);
-  const rows = formSheet.getDataRange().getValues();
-  if (rows.length < 2) return [];
-
-  const headers = buildHeaderMap(rows[0]);
   const assignmentRows = assignment.getDataRange().getValues();
-  const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
+  if (assignmentRows.length < 2) return [];
 
   return assignmentRows
     .slice(1)
     .map(function (assignmentRow) {
-      const assignmentRecord = mapAssignmentRow_(assignmentRow, 0);
-      if (!assignmentRecord || !assignmentRecord.responseKey) return null;
-      const rawRow = findFormResponseRowByResponseKey_(rows, headers, assignmentRecord.responseKey);
-      const record = mapFormResponseRow_(rawRow ? rawRow.row : [], headers, assignmentRecord.responseKey, assignmentRecord, rawRow ? rawRow.rowNumber : 0);
-      if (!record) return null;
-      return record;
+      return mapAssignmentRow_(assignmentRow, 0);
     })
     .filter(function (row) {
       return row && isAssignedRegistration(row);
@@ -1214,7 +1204,7 @@ function findFormResponseRowByResponseKey_(rows, headers, responseKey) {
 
 function buildAssignmentRecordFromFormRow_(row, headers, existingRecord) {
   const sourceRow = Number(existingRecord && existingRecord.sourceRow || 0);
-  const responseKey = String(existingRecord && existingRecord.responseKey || "").trim();
+  const responseKey = String(existingRecord && existingRecord.responseKey || buildResponseKey_(row) || "").trim();
   const mapped = mapFormResponseRow_(row, headers, responseKey, existingRecord || null, sourceRow);
   if (!mapped) return null;
 
@@ -1240,9 +1230,10 @@ function buildAssignmentRecordFromPayload_(payload, row, headers, options) {
   const mapped = row ? mapFormResponseRow_(row, headers, options.responseKey, options.previousRecord || null, options.sourceRow) : null;
   const fallback = mapped || {};
   const availabilityFlags = Array.isArray(payload.availabilityFlags) ? payload.availabilityFlags : (fallback.availabilityFlags || []);
+  const responseKey = String(options.responseKey || payload.responseKey || fallback.responseKey || (row ? buildResponseKey_(row) : "") || "").trim();
 
   return {
-    responseKey: String(options.responseKey || payload.responseKey || fallback.responseKey || "").trim(),
+    responseKey: responseKey,
     sourceRow: Number(options.sourceRow || payload.sourceRow || fallback.sourceRow || 0),
     fullName: String(payload.fullName || fallback.fullName || "").trim(),
     age: String(payload.age || fallback.age || "").trim(),
