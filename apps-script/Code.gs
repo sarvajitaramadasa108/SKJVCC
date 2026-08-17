@@ -110,7 +110,6 @@ function syncFormResponsesToMaster() {
 }
 
 function listRegistrations() {
-  syncFormResponsesToMaster();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const formSheet = formResponsesSheet(ss);
   const assignment = assignmentSheet(ss);
@@ -136,9 +135,10 @@ function listRegistrations() {
 }
 
 function listAssignedRegistrations() {
-  syncFormResponsesToMaster();
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const assignment = assignmentSheet(ss);
+  ensureAssignmentHeader(assignment);
+  dedupeAssignmentSheet_(assignment);
   const assignmentRows = assignment.getDataRange().getValues();
   if (assignmentRows.length < 2) return [];
 
@@ -148,7 +148,7 @@ function listAssignedRegistrations() {
       return mapAssignmentRow_(assignmentRow, 0);
     })
     .filter(function (row) {
-      return row && isAssignedRegistration(row);
+      return row && Boolean(String(row.assignedService || "").trim());
     });
 }
 
@@ -1212,6 +1212,32 @@ function findAssignmentRowIndex_(rows, criteria) {
   }
 
   return -1;
+}
+
+function dedupeAssignmentSheet_(sheet) {
+  const rows = sheet.getDataRange().getValues();
+  if (rows.length < 3) return;
+
+  const seen = {};
+  const rowsToDelete = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const record = mapAssignmentRow_(rows[i], i + 1);
+    if (!record) continue;
+    const responseKey = String(record.responseKey || "").trim();
+    const sourceRow = Number(record.sourceRow || 0);
+    const fingerprint = responseKey || (sourceRow ? "source:" + sourceRow : "");
+    if (!fingerprint) continue;
+    if (seen[fingerprint]) {
+      rowsToDelete.push(i + 1);
+      continue;
+    }
+    seen[fingerprint] = true;
+  }
+
+  for (let i = rowsToDelete.length - 1; i >= 0; i--) {
+    sheet.deleteRow(rowsToDelete[i]);
+  }
 }
 
 function findFormResponseRowByResponseKey_(rows, headers, responseKey) {
