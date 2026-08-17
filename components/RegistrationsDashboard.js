@@ -189,13 +189,14 @@ export default function RegistrationsDashboard() {
   }, [services]);
 
   async function handleAssignService(row, nextService) {
-    const draft = assignmentDrafts[row.sourceRow] || {};
+    const rowKey = row.responseKey || row.sourceRow;
+    const draft = assignmentDrafts[rowKey] || {};
     const serviceName = String(nextService || "").trim();
     const category = String(draft.category || "").trim();
     setAssignmentDrafts((current) => ({
       ...current,
-      [row.sourceRow]: {
-        ...(current[row.sourceRow] || {}),
+      [rowKey]: {
+        ...(current[rowKey] || {}),
         serviceName
       }
     }));
@@ -205,13 +206,14 @@ export default function RegistrationsDashboard() {
   }
 
   async function handleAssignCategory(row, nextCategory) {
-    const draft = assignmentDrafts[row.sourceRow] || {};
+    const rowKey = row.responseKey || row.sourceRow;
+    const draft = assignmentDrafts[rowKey] || {};
     const serviceName = String(draft.serviceName || "").trim();
     const category = String(nextCategory || "").trim();
     setAssignmentDrafts((current) => ({
       ...current,
-      [row.sourceRow]: {
-        ...(current[row.sourceRow] || {}),
+      [rowKey]: {
+        ...(current[rowKey] || {}),
         category
       }
     }));
@@ -221,27 +223,37 @@ export default function RegistrationsDashboard() {
   }
 
   async function saveAssignment(row, serviceName, category) {
-    setSavingRow(row.sourceRow);
+    const rowKey = row.responseKey || row.sourceRow;
+    setSavingRow(rowKey);
     setMessage("");
     try {
       const response = await fetchBridge("registrations.assignService", {
         sourceRow: row.sourceRow,
-        mobileNumber: row.mobileNumber,
+        responseKey: row.responseKey || "",
+        fullName: row.fullName || "",
+        age: row.age || "",
+        mobileNumber: row.mobileNumber || "",
         serviceName,
-        category
+        category,
+        devoteeInTouch: row.devoteeInTouch || "",
+        areaOfStay: row.areaOfStay || "",
+        availabilityForService: row.availabilityForService || "",
+        availabilityFlags: row.availabilityFlags || [],
+        availabilityMap: row.availabilityMap || {},
+        photoUpload: row.photoUpload || ""
       });
       const savedRegistration = response?.registration || {
         ...row,
         assignedService: serviceName,
         assignedCategory: category || row.assignedCategory || "",
-        assignmentFlag: "Yes"
+        assignmentUpdatedAt: ""
       };
       const nextRegistrations = mergeRegistrationRecord(registrations, savedRegistration);
       setRegistrations(nextRegistrations);
       cacheJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
       setAssignmentDrafts((current) => {
         const next = { ...current };
-        delete next[row.sourceRow];
+        delete next[rowKey];
         return next;
       });
       setMessage(`Assigned ${serviceName} to ${row.fullName || row.mobileNumber || "registration"}`);
@@ -458,9 +470,10 @@ export default function RegistrationsDashboard() {
               </thead>
               <tbody>
                 {liveFilteredRegistrations.map((row) => {
-                  const draft = assignmentDrafts[row.sourceRow] || {};
+                  const rowKey = row.responseKey || row.sourceRow;
+                  const draft = assignmentDrafts[rowKey] || {};
                   return (
-                    <tr key={row.sourceRow}>
+                    <tr key={rowKey}>
                       <td className="registration-name-cell">
                         <span>{row.fullName || "-"}</span>
                       </td>
@@ -495,35 +508,35 @@ export default function RegistrationsDashboard() {
                       </td>
                       <td>
                         <div className="service-cell">
-                          {savingRow === row.sourceRow ? (
+                          {savingRow === rowKey ? (
                             <div className="saving-pill">
                               <span className="loading-spinner" aria-hidden="true" />
                               <span>Saving...</span>
                             </div>
                           ) : (
-                            <ServiceDropdown
+                              <ServiceDropdown
                               value={draft.serviceName || row.assignedService || ""}
                               options={serviceOptions}
                               placeholder={serviceOptions.length ? "Assign service" : "No services yet"}
                               onChange={(nextService) => handleAssignService(row, nextService)}
-                              disabled={savingRow === row.sourceRow || !serviceOptions.length}
+                              disabled={savingRow === rowKey || !serviceOptions.length}
                             />
                           )}
                         </div>
                       </td>
                       <td>
                         <div className="service-cell">
-                          {savingRow === row.sourceRow ? (
+                          {savingRow === rowKey ? (
                             <div className="saving-pill">
                               <span className="loading-spinner" aria-hidden="true" />
                               <span>Saving...</span>
                             </div>
                           ) : (
-                            <select
+                              <select
                               className="category-select"
                               value={draft.category || row.assignedCategory || ""}
                               onChange={(event) => handleAssignCategory(row, event.target.value)}
-                              disabled={savingRow === row.sourceRow}
+                              disabled={savingRow === rowKey}
                             >
                               <option value="">Select category</option>
                               {categoryOptions.map((category) => (

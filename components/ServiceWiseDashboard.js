@@ -31,31 +31,18 @@ export default function ServiceWiseDashboard() {
       if (cachedServices.length) {
         setServices(cachedServices);
       }
-      const cachedRows = readCachedRows();
-      if (cachedRows.length) {
-        setRegistrations(cachedRows);
-      }
 
       try {
-        const [servicesPayload, registrationsPayload] = await Promise.all([
-          fetchBridge("services.list"),
-          fetchBridge("registrations.list")
-        ]);
+        const servicesPayload = await fetchBridge("services.list");
         if (!alive) return;
         const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
-        const nextRegistrations = Array.isArray(registrationsPayload) ? registrationsPayload : [];
         setServices(nextServices);
-        setRegistrations(nextRegistrations);
         writeCachedServices(nextServices);
-        writeCachedRows(nextRegistrations);
       } catch (error) {
         if (alive) {
           if (!cachedServices.length) {
             setServices([]);
             setMessage(error.message || "Could not load services");
-          }
-          if (!cachedRows.length) {
-            setRegistrations([]);
           }
         }
       } finally {
@@ -82,15 +69,9 @@ export default function ServiceWiseDashboard() {
       setServiceRows([]);
       setMessage("");
       try {
-        const payload = await fetchBridge("registrations.list");
+        const payload = await fetchBridge("registrations.byService", { serviceName: selectedService });
         if (!alive) return;
-        const nextRows = (Array.isArray(payload) ? payload : []).filter(
-          (row) =>
-            normalizeText(row?.assignedService || "") === normalizeText(selectedService) &&
-            String(row?.assignedService || "").trim()
-        );
-        setRegistrations(Array.isArray(payload) ? payload : []);
-        writeCachedRows(Array.isArray(payload) ? payload : []);
+        const nextRows = Array.isArray(payload) ? payload : [];
         setServiceRows(nextRows);
       } catch (error) {
         if (alive) {

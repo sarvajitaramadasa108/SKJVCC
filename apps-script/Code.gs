@@ -51,6 +51,7 @@ function route(action, payload) {
   if (action === "services.list") return { ok: true, data: listServices() };
   if (action === "services.updateCounts") return { ok: true, data: updateServiceCounts(payload) };
   if (action === "registrations.list") return { ok: true, data: listRegistrations() };
+  if (action === "registrations.assigned") return { ok: true, data: listAssignedRegistrations() };
   if (action === "registrations.byService") return { ok: true, data: registrationsByService(payload.serviceName) };
   if (action === "registrations.assignService") return { ok: true, data: assignService(payload) };
   if (action === "registrations.resetAssignments") return { ok: true, data: resetAssignments() };
@@ -61,11 +62,9 @@ function route(action, payload) {
 
 function setupSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  ensureMasterHeader(masterSheet(ss));
   ensureServiceHeader(serviceSheet(ss));
   ensureAssignmentHeader(assignmentSheet(ss));
   return {
-    masterSheet: MASTER_SHEET_NAME,
     serviceSheet: SERVICE_SHEET_NAME,
     assignmentSheet: ASSIGNMENT_SHEET_NAME
   };
@@ -74,43 +73,26 @@ function setupSheets() {
 function syncFormResponsesToMaster() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const formSheet = formResponsesSheet(ss);
-  const master = masterSheet(ss);
   const assignment = assignmentSheet(ss);
-  ensureMasterHeader(master);
   ensureAssignmentHeader(assignment);
 
   const values = formSheet.getDataRange().getValues();
   if (values.length < 2) return { synced: 0 };
 
   const formHeaders = buildHeaderMap(values[0]);
-  const masterRows = master.getDataRange().getValues();
-  const masterIndex = buildMasterRowIndex_(masterRows);
   const assignmentRows = assignment.getDataRange().getValues();
   const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
   let synced = 0;
 
   for (let i = 1; i < values.length; i++) {
-    const sourceRow = i + 1;
     const row = values[i];
     if (isFormHeaderRow_(row)) continue;
-    const mobileNumber = readFormCell_(row, formHeaders.mobileNumber, 4);
-    const fullName = readFormCell_(row, formHeaders.fullName, 1);
-    const age = readFormCell_(row, formHeaders.age, 2);
     const responseKey = buildResponseKey_(row);
-    const assignmentRecord =
-      assignmentIndex[responseKey] ||
-      assignmentIndex["source:" + sourceRow];
-    const existingRow =
-      masterIndex[responseKey] ||
-      masterIndex["source:" + sourceRow];
-    const record = mapFormResponseRow_(row, formHeaders, sourceRow, responseKey, existingRow, assignmentRecord);
-    if (!record) continue;
-    const masterRecord = record.slice();
-    masterRecord[14] = "";
-    upsertMasterRow_(master, masterRecord, existingRow);
-    const writtenRow = existingRow || master.getLastRow();
-    masterIndex[responseKey] = writtenRow;
-    masterIndex["source:" + sourceRow] = writtenRow;
+    const assignmentRecord = assignmentIndex[responseKey];
+    if (!assignmentRecord) continue;
+    const nextRecord = buildAssignmentRecordFromFormRow_(row, formHeaders, assignmentRecord);
+    if (!nextRecord) continue;
+    upsertAssignmentRecord_(assignment, nextRecord);
     synced += 1;
   }
 
@@ -128,126 +110,105 @@ function listRegistrations() {
   const headers = buildHeaderMap(rows[0]);
   const assignmentRows = assignment.getDataRange().getValues();
   const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
-  const masterHeaders = buildHeaderMap(masterHeaderRow_());
 
   return rows
     .slice(1)
     .map(function (row, index) {
-      const sourceRow = index + 2;
       const responseKey = buildResponseKey_(row);
-      const assignmentRecord =
-        assignmentIndex[responseKey] ||
-        assignmentIndex["source:" + sourceRow];
-      const record = mapFormResponseRow_(row, headers, sourceRow, responseKey, null, assignmentRecord);
+      const assignmentRecord = assignmentIndex[responseKey] || null;
+      const record = mapFormResponseRow_(row, headers, responseKey, assignmentRecord, index + 2);
       if (!record) return null;
-      return mapMasterRow_(record, masterHeaders, index + 2);
+      return record;
     })
     .filter(function (row) {
-      return row && isValidMasterRecord_(row) && !isHeaderLikeRecord_(row);
+      return row && isValidRegistrationRecord_(row) && !isHeaderLikeRecord_(row);
+    });
+}
+
+function listAssignedRegistrations() {
+  syncFormResponsesToMaster();
+  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const formSheet = formResponsesSheet(ss);
+  const assignment = assignmentSheet(ss);
+  const rows = formSheet.getDataRange().getValues();
+  if (rows.length < 2) return [];
+
+  const headers = buildHeaderMap(rows[0]);
+  const assignmentRows = assignment.getDataRange().getValues();
+  const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
+
+  return assignmentRows
+    .slice(1)
+    .map(function (assignmentRow) {
+      const assignmentRecord = mapAssignmentRow_(assignmentRow, 0);
+      if (!assignmentRecord || !assignmentRecord.responseKey) return null;
+      const rawRow = findFormResponseRowByResponseKey_(rows, headers, assignmentRecord.responseKey);
+      const record = mapFormResponseRow_(rawRow ? rawRow.row : [], headers, assignmentRecord.responseKey, assignmentRecord, rawRow ? rawRow.rowNumber : 0);
+      if (!record) return null;
+      return record;
+    })
+    .filter(function (row) {
+      return row && isAssignedRegistration(row);
     });
 }
 
 function registrationsByService(serviceName) {
   const target = String(serviceName || "").trim();
   if (!target) throw new Error("Select a service");
-  return listRegistrations().filter(function (row) {
+  return listAssignedRegistrations().filter(function (row) {
     return normalizeHeader_(row.assignedService || "") === normalizeHeader_(target);
   });
 }
 
 function assignService(payload) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sheet = masterSheet(ss);
-  const serviceSheetData = serviceSheet(ss);
   const assignment = assignmentSheet(ss);
-  ensureMasterHeader(sheet);
-  ensureServiceHeader(serviceSheetData);
   ensureAssignmentHeader(assignment);
-  const rows = sheet.getDataRange().getValues();
+  const formSheet = formResponsesSheet(ss);
+  const rows = formSheet.getDataRange().getValues();
   if (rows.length < 2) throw new Error("No registrations found");
 
   const headers = buildHeaderMap(rows[0]);
+  const responseKey = String(payload.responseKey || "").trim();
   const sourceRow = Number(payload.sourceRow || 0);
   const serviceName = String(payload.serviceName || "").trim();
   const category = String(payload.category || "").trim();
   if (!serviceName) throw new Error("Select a service");
   if (!category) throw new Error("Select a category");
 
-  const targetRow = findMasterRowBySourceRow_(rows, sourceRow);
-  if (targetRow < 2) throw new Error("Registration not found");
-
-  const current = rows[targetRow - 1];
+  const current = findFormResponseRowByResponseKey_(rows, headers, responseKey || String(payload.responseKey || ""));
+  const currentRow = current ? current.row : null;
+  if (!currentRow && !payload.fullName) throw new Error("Registration not found");
   const assignmentRows = assignment.getDataRange().getValues();
   const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
-  const responseKey = String(current[headers.responseKey] || "").trim();
-  const previousAssignment =
-    assignmentIndex[responseKey] ||
-    assignmentIndex["source:" + sourceRow] ||
-    null;
+  const resolvedResponseKey = responseKey || (currentRow ? buildResponseKey_(currentRow) : "");
+  const previousAssignment = assignmentIndex[resolvedResponseKey] || null;
   const previousService = String(previousAssignment && previousAssignment.assignedService || "").trim();
   const previousCategory = String(previousAssignment && previousAssignment.assignedCategory || "").trim();
   const nextCategory = category || previousCategory;
-  current[headers.assignedService] = "";
-  current[headers.assignedCategory] = nextCategory;
-  current[headers.assignmentFlag] = "Yes";
-  current[headers.assignmentUpdatedAt] = formatNow_();
-  sheet.getRange(targetRow, 1, 1, rows[0].length).setValues([current]);
-  updateServiceAllocationCount_(serviceSheetData, previousService, previousCategory, -1);
-  updateServiceAllocationCount_(serviceSheetData, serviceName, nextCategory, 1);
-  upsertAssignmentRecord_(assignment, {
-    responseKey: String(current[headers.responseKey] || "").trim(),
-    sourceRow: sourceRow,
-    fullName: String(current[headers.fullName] || "").trim(),
-    age: String(current[headers.age] || "").trim(),
-    mobileNumber: String(current[headers.mobileNumber] || "").trim(),
+  const updatedAt = formatNow_();
+
+  const record = buildAssignmentRecordFromPayload_(payload, currentRow, headers, {
+    responseKey: resolvedResponseKey,
+    sourceRow: sourceRow || Number(previousAssignment && previousAssignment.sourceRow || 0),
     assignedService: serviceName,
     assignedCategory: nextCategory,
-    assignedFlag: "Yes",
-    updatedAt: current[headers.assignmentUpdatedAt]
+    updatedAt: updatedAt,
+    previousRecord: previousAssignment
   });
+
+  upsertAssignmentRecord_(assignment, record);
   SpreadsheetApp.flush();
 
   return {
-    registration: Object.assign({}, mapMasterRow_(current, headers, targetRow), {
-      assignedService: serviceName,
-      assignedCategory: nextCategory,
-      assignmentFlag: "Yes",
-      assignmentUpdatedAt: current[headers.assignmentUpdatedAt]
-    })
+    registration: normalizeAssignmentRegistration_(record)
   };
 }
 
 function resetAssignments() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const master = masterSheet(ss);
-  const service = serviceSheet(ss);
   const assignment = assignmentSheet(ss);
-  ensureMasterHeader(master);
-  ensureServiceHeader(service);
   ensureAssignmentHeader(assignment);
-
-  const masterValues = master.getDataRange().getValues();
-  if (masterValues.length > 1) {
-    const headers = buildHeaderMap(masterValues[0]);
-    for (let i = 1; i < masterValues.length; i++) {
-      masterValues[i][headers.assignedService] = "";
-      masterValues[i][headers.assignedCategory] = "";
-      masterValues[i][headers.assignmentFlag] = "";
-      masterValues[i][headers.assignmentUpdatedAt] = "";
-    }
-    master.getRange(2, 1, masterValues.length - 1, masterValues[0].length).setValues(masterValues.slice(1));
-  }
-
-  const serviceValues = service.getDataRange().getValues();
-  if (serviceValues.length > 1) {
-    const headers = buildHeaderMap(serviceValues[0]);
-    for (let i = 1; i < serviceValues.length; i++) {
-      if (headers.allocatedCongCount >= 0) serviceValues[i][headers.allocatedCongCount] = 0;
-      if (headers.allocatedFolkCount >= 0) serviceValues[i][headers.allocatedFolkCount] = 0;
-      if (headers.allocatedEmpCount >= 0) serviceValues[i][headers.allocatedEmpCount] = 0;
-    }
-    service.getRange(2, 1, serviceValues.length - 1, serviceValues[0].length).setValues(serviceValues.slice(1));
-  }
 
   const assignmentLastRow = assignment.getLastRow();
   if (assignmentLastRow > 1) {
@@ -269,25 +230,14 @@ function deleteRegistration(payload) {
   if (!sourceRow && !responseKey && !fullName && !mobileNumber && !age) throw new Error("Registration not found");
 
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const master = masterSheet(ss);
   const formSheet = formResponsesSheet(ss);
   const assignment = assignmentSheet(ss);
-  ensureMasterHeader(master);
   ensureAssignmentHeader(assignment);
 
-  const masterRows = master.getDataRange().getValues();
   const formRows = formSheet.getDataRange().getValues();
-  if (masterRows.length < 2 || formRows.length < 2) throw new Error("No registrations found");
+  if (formRows.length < 2) throw new Error("No registrations found");
 
-  const masterHeaders = buildHeaderMap(masterRows[0]);
   const formHeaders = buildHeaderMap(formRows[0]);
-  const masterTarget = findDeleteTargetRow_(masterRows, masterHeaders, {
-    responseKey: responseKey,
-    fullName: fullName,
-    mobileNumber: mobileNumber,
-    age: age,
-    sourceRow: sourceRow
-  });
   const formTarget = findDeleteTargetRow_(formRows, formHeaders, {
     responseKey: responseKey,
     fullName: fullName,
@@ -296,11 +246,6 @@ function deleteRegistration(payload) {
     sourceRow: sourceRow
   });
 
-  if (masterTarget < 2 && formTarget < 2) throw new Error("Registration not found");
-
-  if (masterTarget >= 2) {
-    master.deleteRow(masterTarget);
-  }
   if (formTarget >= 2) {
     formSheet.deleteRow(formTarget);
   }
@@ -561,7 +506,15 @@ function ensureServiceHeader(sheet) {
 }
 
 function ensureAssignmentHeader(sheet) {
-  const headers = [
+  const headers = assignmentHeaderRow_();
+  if (sheet.getLastRow() > 0 && sheet.getLastColumn() < headers.length) {
+    sheet.insertColumnsAfter(sheet.getLastColumn(), headers.length - sheet.getLastColumn());
+  }
+  ensureHeaders_(sheet, headers);
+}
+
+function assignmentHeaderRow_() {
+  return [
     "Response Key",
     "Source Row",
     "Full Name",
@@ -569,9 +522,16 @@ function ensureAssignmentHeader(sheet) {
     "Mobile Number",
     "Assigned Service",
     "Assigned Category",
-    "Updated At"
+    "Updated At",
+    "Devotee in Touch",
+    "Area of Staying in Vizag",
+    "Availability for Service",
+    AVAILABILITY_COLUMNS[0],
+    AVAILABILITY_COLUMNS[1],
+    AVAILABILITY_COLUMNS[2],
+    AVAILABILITY_COLUMNS[3],
+    "Photo upload"
   ];
-  ensureHeaders_(sheet, headers);
 }
 
 function ensureHeaders_(sheet, headers) {
@@ -580,19 +540,21 @@ function ensureHeaders_(sheet, headers) {
     return;
   }
   const current = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), headers.length)).getValues()[0];
-  let changed = false;
-  for (let i = 0; i < headers.length; i++) {
+  let changed = current.length < headers.length;
+  for (let i = 0; i < headers.length && !changed; i++) {
     if (String(current[i] || "").trim() !== headers[i]) {
       changed = true;
-      break;
     }
   }
   if (changed) {
+    if (sheet.getLastColumn() < headers.length) {
+      sheet.insertColumnsAfter(sheet.getLastColumn(), headers.length - sheet.getLastColumn());
+    }
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
   }
 }
 
-function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, assignmentRecord) {
+function mapFormResponseRow_(row, headers, responseKey, assignmentRecord, sourceRow) {
   const fullName = readFormCell_(row, headers.fullName, 1);
   const age = readFormCell_(row, headers.age, 2);
   const gender = readFormCell_(row, headers.gender, 3);
@@ -601,70 +563,56 @@ function mapFormResponseRow_(row, headers, sourceRow, responseKey, existingRow, 
   const areaOfStay = readFormCell_(row, headers.areaOfStay, 6);
   const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 7);
   const photoUpload = readFormCell_(row, headers.photoUpload, 8);
-  const formAssignedService = readFormCell_(row, headers.formAssignedService, 9);
-  const formAssignedCategory = readFormCell_(row, headers.formAssignedCategory, 10);
   const availability = parseAvailability_(availabilityForService);
   const assignedService = String(
     (assignmentRecord && assignmentRecord.assignedService) ||
-    (existingRow && existingRow[14]) ||
-    formAssignedService ||
     ""
   ).trim();
   const assignedCategory = String(
     (assignmentRecord && assignmentRecord.assignedCategory) ||
-    (existingRow && existingRow[15]) ||
-    formAssignedCategory ||
     ""
   ).trim();
   const assignmentUpdatedAt = String(
     (assignmentRecord && assignmentRecord.updatedAt) ||
-    (existingRow && existingRow[16]) ||
     ""
-  ).trim();
-  const assignedFlag = String(
-    (assignmentRecord && assignmentRecord.assignedFlag) ||
-    (existingRow && existingRow[18]) ||
-    ((assignmentRecord && assignmentRecord.assignedService && assignmentRecord.assignedCategory) ? "Yes" : "") ||
-    (assignedService && assignedCategory ? "Yes" : "")
   ).trim();
   const responseKeyValue = String(
     (assignmentRecord && assignmentRecord.responseKey) ||
     responseKey ||
-    (existingRow && existingRow[17]) ||
     ""
   ).trim();
 
-  if (
-    isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) ||
-    isFormHeaderRow_(row) ||
-    !String(fullName || mobileNumber || age || gender || devoteeInTouch || areaOfStay || availabilityForService || photoUpload).trim()
-  ) {
+  if (isHeaderLikeInput_(fullName, mobileNumber, availabilityForService) || isFormHeaderRow_(row)) {
     return null;
   }
 
-  const record = existingRow && existingRow.length ? existingRow.slice() : [];
-  while (record.length < 19) record.push("");
-
-  record[0] = existingRow && existingRow[0] ? existingRow[0] : sourceRow;
-  record[1] = sourceRow;
-  record[2] = fullName;
-  record[3] = age;
-  record[4] = gender;
-  record[5] = mobileNumber;
-  record[6] = devoteeInTouch;
-  record[7] = areaOfStay;
-  record[8] = availabilityForService;
-  record[9] = availability[0] ? "Yes" : "";
-  record[10] = availability[1] ? "Yes" : "";
-  record[11] = availability[2] ? "Yes" : "";
-  record[12] = availability[3] ? "Yes" : "";
-  record[13] = photoUpload;
-  record[14] = assignedService;
-  record[15] = assignedCategory;
-  record[16] = assignmentUpdatedAt;
-  record[17] = responseKeyValue;
-  record[18] = assignedFlag;
-  return record;
+  return {
+    rowNumber: sourceRow || 0,
+    sourceRow: Number(sourceRow || 0),
+    responseKey: responseKeyValue,
+    fullName: fullName,
+    age: age,
+    gender: gender,
+    mobileNumber: mobileNumber,
+    devoteeInTouch: devoteeInTouch,
+    areaOfStay: areaOfStay,
+    availabilityForService: availabilityForService,
+    availabilityFlags: AVAILABILITY_COLUMNS.map(function (label, index) {
+      return {
+        label: label,
+        available: availability[index]
+      };
+    }),
+    availabilityMap: AVAILABILITY_COLUMNS.reduce(function (acc, label, index) {
+      acc[label] = Boolean(availability[index]);
+      return acc;
+    }, {}),
+    photoUpload: photoUpload,
+    assignedService: assignedService,
+    assignedCategory: assignedCategory,
+    assignmentUpdatedAt: assignmentUpdatedAt,
+    isAssigned: Boolean(assignedService && assignedCategory)
+  };
 }
 
 function readFormCell_(row, headerIndex, fallbackIndex) {
@@ -1165,17 +1113,32 @@ function buildAssignmentRowIndex_(rows) {
 }
 
 function mapAssignmentRow_(row, rowNumber) {
+  const cells = Array.isArray(row) ? row : [];
   return {
     rowNumber: rowNumber,
-    responseKey: String(row[0] || "").trim(),
-    sourceRow: Number(row[1] || 0),
-    fullName: String(row[2] || "").trim(),
-    age: String(row[3] || "").trim(),
-    mobileNumber: String(row[4] || "").trim(),
-    assignedService: String(row[5] || "").trim(),
-    assignedCategory: String(row[6] || "").trim(),
-    assignedFlag: "Yes",
-    updatedAt: String(row[7] || "").trim()
+    responseKey: String(cells[0] || "").trim(),
+    sourceRow: Number(cells[1] || 0),
+    fullName: String(cells[2] || "").trim(),
+    age: String(cells[3] || "").trim(),
+    mobileNumber: String(cells[4] || "").trim(),
+    assignedService: String(cells[5] || "").trim(),
+    assignedCategory: String(cells[6] || "").trim(),
+    updatedAt: String(cells[7] || "").trim(),
+    devoteeInTouch: String(cells[8] || "").trim(),
+    areaOfStay: String(cells[9] || "").trim(),
+    availabilityForService: String(cells[10] || "").trim(),
+    availabilityFlags: AVAILABILITY_COLUMNS.map(function (_, index) {
+      return {
+        label: AVAILABILITY_COLUMNS[index],
+        available: String(cells[11 + index] || "").trim().toLowerCase() === "yes"
+      };
+    }),
+    availabilityMap: AVAILABILITY_COLUMNS.reduce(function (acc, label, index) {
+      acc[label] = String(cells[11 + index] || "").trim().toLowerCase() === "yes";
+      return acc;
+    }, {}),
+    photoUpload: String(cells[15] || "").trim(),
+    isAssigned: Boolean(String(cells[5] || "").trim() && String(cells[6] || "").trim())
   };
 }
 
@@ -1190,7 +1153,15 @@ function upsertAssignmentRecord_(sheet, record) {
     String(record.mobileNumber || "").trim(),
     String(record.assignedService || "").trim(),
     String(record.assignedCategory || "").trim(),
-    String(record.updatedAt || "").trim()
+    String(record.updatedAt || "").trim(),
+    String(record.devoteeInTouch || "").trim(),
+    String(record.areaOfStay || "").trim(),
+    String(record.availabilityForService || "").trim(),
+    String(record.availabilityFlags && record.availabilityFlags[0] && record.availabilityFlags[0].available ? "Yes" : "").trim(),
+    String(record.availabilityFlags && record.availabilityFlags[1] && record.availabilityFlags[1].available ? "Yes" : "").trim(),
+    String(record.availabilityFlags && record.availabilityFlags[2] && record.availabilityFlags[2].available ? "Yes" : "").trim(),
+    String(record.availabilityFlags && record.availabilityFlags[3] && record.availabilityFlags[3].available ? "Yes" : "").trim(),
+    String(record.photoUpload || "").trim()
   ];
 
   if (rowIndex >= 2) {
@@ -1223,14 +1194,98 @@ function findAssignmentRowIndex_(rows, criteria) {
   return -1;
 }
 
-function findMasterRowBySourceRow_(rows, sourceRow) {
-  if (!sourceRow) return -1;
+function findFormResponseRowByResponseKey_(rows, headers, responseKey) {
+  const target = String(responseKey || "").trim();
+  if (!target) return null;
+
   for (let i = 1; i < rows.length; i++) {
-    if (Number(rows[i][1] || 0) === sourceRow) {
-      return i + 1;
+    const row = rows[i];
+    if (buildResponseKey_(row) === target) {
+      return {
+        row: row,
+        rowNumber: i + 1,
+        responseKey: target
+      };
     }
   }
-  return -1;
+
+  return null;
+}
+
+function buildAssignmentRecordFromFormRow_(row, headers, existingRecord) {
+  const sourceRow = Number(existingRecord && existingRecord.sourceRow || 0);
+  const responseKey = String(existingRecord && existingRecord.responseKey || "").trim();
+  const mapped = mapFormResponseRow_(row, headers, responseKey, existingRecord || null, sourceRow);
+  if (!mapped) return null;
+
+  return {
+    responseKey: String(mapped.responseKey || responseKey || "").trim(),
+    sourceRow: Number(existingRecord && existingRecord.sourceRow || mapped.sourceRow || 0),
+    fullName: String(mapped.fullName || "").trim(),
+    age: String(mapped.age || "").trim(),
+    mobileNumber: String(mapped.mobileNumber || "").trim(),
+    assignedService: String(existingRecord && existingRecord.assignedService || "").trim(),
+    assignedCategory: String(existingRecord && existingRecord.assignedCategory || "").trim(),
+    updatedAt: String(existingRecord && existingRecord.updatedAt || "").trim(),
+    devoteeInTouch: String(mapped.devoteeInTouch || "").trim(),
+    areaOfStay: String(mapped.areaOfStay || "").trim(),
+    availabilityForService: String(mapped.availabilityForService || "").trim(),
+    availabilityFlags: mapped.availabilityFlags || [],
+    availabilityMap: mapped.availabilityMap || {},
+    photoUpload: String(mapped.photoUpload || "").trim()
+  };
+}
+
+function buildAssignmentRecordFromPayload_(payload, row, headers, options) {
+  const mapped = row ? mapFormResponseRow_(row, headers, options.responseKey, options.previousRecord || null, options.sourceRow) : null;
+  const fallback = mapped || {};
+  const availabilityFlags = Array.isArray(payload.availabilityFlags) ? payload.availabilityFlags : (fallback.availabilityFlags || []);
+
+  return {
+    responseKey: String(options.responseKey || payload.responseKey || fallback.responseKey || "").trim(),
+    sourceRow: Number(options.sourceRow || payload.sourceRow || fallback.sourceRow || 0),
+    fullName: String(payload.fullName || fallback.fullName || "").trim(),
+    age: String(payload.age || fallback.age || "").trim(),
+    mobileNumber: String(payload.mobileNumber || fallback.mobileNumber || "").trim(),
+    assignedService: String(options.assignedService || payload.serviceName || fallback.assignedService || "").trim(),
+    assignedCategory: String(options.assignedCategory || payload.category || fallback.assignedCategory || "").trim(),
+    updatedAt: String(options.updatedAt || fallback.updatedAt || formatNow_()).trim(),
+    devoteeInTouch: String(payload.devoteeInTouch || fallback.devoteeInTouch || "").trim(),
+    areaOfStay: String(payload.areaOfStay || fallback.areaOfStay || "").trim(),
+    availabilityForService: String(payload.availabilityForService || fallback.availabilityForService || "").trim(),
+    availabilityFlags: availabilityFlags,
+    availabilityMap: payload.availabilityMap || fallback.availabilityMap || {},
+    photoUpload: String(payload.photoUpload || fallback.photoUpload || "").trim()
+  };
+}
+
+function normalizeAssignmentRegistration_(record) {
+  return {
+    rowNumber: Number(record.rowNumber || 0),
+    sourceRow: Number(record.sourceRow || 0),
+    responseKey: String(record.responseKey || "").trim(),
+    fullName: String(record.fullName || "").trim(),
+    age: String(record.age || "").trim(),
+    mobileNumber: String(record.mobileNumber || "").trim(),
+    devoteeInTouch: String(record.devoteeInTouch || "").trim(),
+    areaOfStay: String(record.areaOfStay || "").trim(),
+    availabilityForService: String(record.availabilityForService || "").trim(),
+    availabilityFlags: Array.isArray(record.availabilityFlags) ? record.availabilityFlags : [],
+    availabilityMap: record.availabilityMap || {},
+    photoUpload: String(record.photoUpload || "").trim(),
+    assignedService: String(record.assignedService || "").trim(),
+    assignedCategory: String(record.assignedCategory || "").trim(),
+    assignmentUpdatedAt: String(record.updatedAt || "").trim(),
+    isAssigned: Boolean(String(record.assignedService || "").trim() && String(record.assignedCategory || "").trim())
+  };
+}
+
+function isValidRegistrationRecord_(row) {
+  if (!row) return false;
+  const fullName = normalizeHeader_(row.fullName || "");
+  const mobileNumber = normalizeHeader_(row.mobileNumber || "");
+  const age = normalizeHeader_(row.age || "");
+  return Boolean(fullName || mobileNumber || age);
 }
 
 function formatNow_() {
