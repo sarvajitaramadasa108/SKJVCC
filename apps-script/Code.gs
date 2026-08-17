@@ -89,10 +89,20 @@ function syncFormResponsesToMaster() {
     if (isFormHeaderRow_(row)) continue;
     const responseKey = buildResponseKey_(row);
     const assignmentRecord = assignmentIndex[responseKey] || assignmentIndex["source:" + (i + 1)] || null;
-    if (!assignmentRecord) continue;
-    const nextRecord = buildAssignmentRecordFromFormRow_(row, formHeaders, assignmentRecord);
+    const hasFormAssignedService = String(readFormCell_(row, formHeaders.formAssignedService, 9) || "").trim();
+    if (!assignmentRecord && !hasFormAssignedService) continue;
+    const seedRecord = assignmentRecord || {
+      responseKey: responseKey,
+      sourceRow: i + 1,
+      assignedService: hasFormAssignedService,
+      assignedCategory: "",
+      updatedAt: ""
+    };
+    const nextRecord = buildAssignmentRecordFromFormRow_(row, formHeaders, seedRecord);
     if (!nextRecord) continue;
     upsertAssignmentRecord_(assignment, nextRecord);
+    assignmentIndex[nextRecord.responseKey] = nextRecord;
+    if (nextRecord.sourceRow) assignmentIndex["source:" + nextRecord.sourceRow] = nextRecord;
     synced += 1;
   }
 

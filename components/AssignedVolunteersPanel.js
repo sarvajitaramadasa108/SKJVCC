@@ -5,7 +5,7 @@ import { AVAILABILITY_COLUMNS, buildImageUrl, isAssignedRegistration, mergeRegis
 import ServiceDropdown from "@/components/ServiceDropdown";
 
 const REQUEST_TIMEOUT_MS = 120000;
-const REGISTRATIONS_CACHE_KEY = "skjvcc_registrations_cache_v2";
+const ASSIGNED_REGISTRATIONS_CACHE_KEY = "skjvcc_assigned_registrations_cache_v1";
 const SERVICES_CACHE_KEY = "skjvcc_services_cache_v2";
 
 function emptyImage() {
@@ -26,7 +26,7 @@ export default function AssignedVolunteersPanel() {
 
   useEffect(() => {
     let alive = true;
-    const cachedRegistrations = readCachedJson(REGISTRATIONS_CACHE_KEY);
+    const cachedRegistrations = readCachedJson(ASSIGNED_REGISTRATIONS_CACHE_KEY);
     const cachedServices = readCachedJson(SERVICES_CACHE_KEY);
 
     if (Array.isArray(cachedRegistrations)) setRegistrations(cachedRegistrations);
@@ -44,7 +44,7 @@ export default function AssignedVolunteersPanel() {
         if (!alive) return;
         setRegistrations(Array.isArray(registrationsPayload) ? registrationsPayload : []);
         setServices(Array.isArray(servicesPayload) ? servicesPayload : []);
-        cacheJson(REGISTRATIONS_CACHE_KEY, Array.isArray(registrationsPayload) ? registrationsPayload : []);
+        cacheJson(ASSIGNED_REGISTRATIONS_CACHE_KEY, Array.isArray(registrationsPayload) ? registrationsPayload : []);
         cacheJson(SERVICES_CACHE_KEY, Array.isArray(servicesPayload) ? servicesPayload : []);
       } catch (error) {
         if (alive) {
@@ -105,7 +105,7 @@ export default function AssignedVolunteersPanel() {
       const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
       setRegistrations(nextRegistrations);
       setServices(nextServices);
-      cacheJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
+      cacheJson(ASSIGNED_REGISTRATIONS_CACHE_KEY, nextRegistrations);
       cacheJson(SERVICES_CACHE_KEY, nextServices);
     } catch (error) {
       setMessage(error.message || "Could not refresh assigned volunteers");
@@ -187,7 +187,7 @@ export default function AssignedVolunteersPanel() {
       const nextServices = Array.isArray(servicesPayload) ? servicesPayload : [];
       setRegistrations(nextRegistrations);
       setServices(nextServices);
-      cacheJson(REGISTRATIONS_CACHE_KEY, nextRegistrations);
+      cacheJson(ASSIGNED_REGISTRATIONS_CACHE_KEY, nextRegistrations);
       cacheJson(SERVICES_CACHE_KEY, nextServices);
       setEditingRow(null);
       setAssignmentDrafts((current) => {
