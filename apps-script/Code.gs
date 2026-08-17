@@ -164,7 +164,6 @@ function assignService(payload) {
   const serviceName = String(payload.serviceName || "").trim();
   const category = String(payload.category || "").trim();
   if (!serviceName) throw new Error("Select a service");
-  if (!category) throw new Error("Select a category");
 
   const current = findFormResponseRowByResponseKey_(rows, headers, responseKey || String(payload.responseKey || ""));
   const currentRow = current ? current.row : null;
@@ -177,6 +176,13 @@ function assignService(payload) {
   const previousCategory = String(previousAssignment && previousAssignment.assignedCategory || "").trim();
   const nextCategory = category || previousCategory;
   const updatedAt = formatNow_();
+
+  if (currentRow && headers.formAssignedService >= 0) {
+    const formRowNumber = current ? current.rowNumber : sourceRow;
+    if (formRowNumber >= 2) {
+      formSheet.getRange(formRowNumber, headers.formAssignedService + 1).setValue(serviceName);
+    }
+  }
 
   const record = buildAssignmentRecordFromPayload_(payload, currentRow, headers, {
     responseKey: resolvedResponseKey,
@@ -566,8 +572,10 @@ function mapFormResponseRow_(row, headers, responseKey, assignmentRecord, source
   const areaOfStay = readFormCell_(row, headers.areaOfStay, 6);
   const availabilityForService = readAvailabilityForService_(row, headers.availabilityForService, 7);
   const photoUpload = readFormCell_(row, headers.photoUpload, 8);
+  const formAssignedService = readFormCell_(row, headers.formAssignedService, 9);
   const availability = parseAvailability_(availabilityForService);
   const assignedService = String(
+    formAssignedService ||
     (assignmentRecord && assignmentRecord.assignedService) ||
     ""
   ).trim();
@@ -614,7 +622,7 @@ function mapFormResponseRow_(row, headers, responseKey, assignmentRecord, source
     assignedService: assignedService,
     assignedCategory: assignedCategory,
     assignmentUpdatedAt: assignmentUpdatedAt,
-    isAssigned: Boolean(assignedService && assignedCategory)
+    isAssigned: Boolean(assignedService)
   };
 }
 
@@ -763,7 +771,7 @@ function emptyCategoryCounts() {
 }
 
 function buildResponseKey_(row) {
-  return (Array.isArray(row) ? row : [])
+  return (Array.isArray(row) ? row.slice(0, 9) : [])
     .map(function (cell) {
       return normalizeHeader_(cell);
     })
@@ -1001,8 +1009,7 @@ function isAssignedRow_(row, headers) {
   const flag = normalizeHeader_(row[headers.assignmentFlag] || row[18] || "");
   if (flag === "yes" || flag === "assigned" || flag === "true") return true;
   const assignedService = String(row[headers.assignedService] || "").trim();
-  const assignedCategory = String(row[headers.assignedCategory] || "").trim();
-  return Boolean(assignedService && assignedCategory);
+  return Boolean(assignedService);
 }
 
 function pruneInvalidMasterRows_(sheet, rows, headers) {
@@ -1227,7 +1234,7 @@ function buildAssignmentRecordFromFormRow_(row, headers, existingRecord) {
     fullName: String(mapped.fullName || "").trim(),
     age: String(mapped.age || "").trim(),
     mobileNumber: String(mapped.mobileNumber || "").trim(),
-    assignedService: String(existingRecord && existingRecord.assignedService || "").trim(),
+    assignedService: String(mapped.assignedService || existingRecord && existingRecord.assignedService || "").trim(),
     assignedCategory: String(existingRecord && existingRecord.assignedCategory || "").trim(),
     updatedAt: String(existingRecord && existingRecord.updatedAt || "").trim(),
     devoteeInTouch: String(mapped.devoteeInTouch || "").trim(),
@@ -1280,7 +1287,7 @@ function normalizeAssignmentRegistration_(record) {
     assignedService: String(record.assignedService || "").trim(),
     assignedCategory: String(record.assignedCategory || "").trim(),
     assignmentUpdatedAt: String(record.updatedAt || "").trim(),
-    isAssigned: Boolean(String(record.assignedService || "").trim() && String(record.assignedCategory || "").trim())
+    isAssigned: Boolean(String(record.assignedService || "").trim())
   };
 }
 

@@ -126,7 +126,7 @@ export default function AssignedVolunteersPanel() {
     }));
     const draft = assignmentDrafts[rowKey] || {};
     const category = String(draft.category || row.assignedCategory || "").trim();
-    if (serviceName && category) {
+    if (serviceName) {
       await saveAssignment(row, serviceName, category);
     }
   }
@@ -149,8 +149,8 @@ export default function AssignedVolunteersPanel() {
     const draft = assignmentDrafts[rowKey] || {};
     const serviceName = String(draft.serviceName || row.assignedService || "").trim();
     const category = String(draft.category || row.assignedCategory || "").trim();
-    if (!serviceName || !category) {
-      setMessage("Select both service and category before saving");
+    if (!serviceName) {
+      setMessage("Select a service before saving");
       return;
     }
     await saveAssignment(row, serviceName, category);

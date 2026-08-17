@@ -41,8 +41,7 @@ export function dedupeRegistrations(rows) {
 export function isAssignedRegistration(row) {
   const assignedFlag = normalizeText(row?.assignmentFlag || row?.assignedFlag || row?.assignmentStatus);
   const assignedService = normalizeExactText(row?.assignedService);
-  const assignedCategory = normalizeExactText(row?.assignedCategory);
-  return assignedFlag === "yes" || assignedFlag === "assigned" || assignedFlag === "true" || Boolean(assignedService && assignedCategory);
+  return assignedFlag === "yes" || assignedFlag === "assigned" || assignedFlag === "true" || Boolean(assignedService);
 }
 
 export function mergeRegistrationRecord(rows, updatedRow) {
