@@ -670,7 +670,7 @@ function readAvailabilityForService_(row, headerIndex, fallbackIndex) {
 
 function buildAllocatedSeedCounts_() {
   const counts = {};
-  const registrations = listRegistrations();
+  const registrations = listAssignedRegistrations();
 
   for (let i = 0; i < registrations.length; i++) {
     const row = registrations[i];
