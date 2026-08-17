@@ -197,8 +197,21 @@ function assignService(payload) {
 
 function resetAssignments() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  const service = serviceSheet(ss);
   const assignment = assignmentSheet(ss);
+  ensureServiceHeader(service);
   ensureAssignmentHeader(assignment);
+
+  const serviceValues = service.getDataRange().getValues();
+  if (serviceValues.length > 1) {
+    const headers = buildHeaderMap(serviceValues[0]);
+    for (let i = 1; i < serviceValues.length; i++) {
+      if (headers.allocatedCongCount >= 0) serviceValues[i][headers.allocatedCongCount] = 0;
+      if (headers.allocatedFolkCount >= 0) serviceValues[i][headers.allocatedFolkCount] = 0;
+      if (headers.allocatedEmpCount >= 0) serviceValues[i][headers.allocatedEmpCount] = 0;
+    }
+    service.getRange(2, 1, serviceValues.length - 1, serviceValues[0].length).setValues(serviceValues.slice(1));
+  }
 
   const assignmentLastRow = assignment.getLastRow();
   if (assignmentLastRow > 1) {
