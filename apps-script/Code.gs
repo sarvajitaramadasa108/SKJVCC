@@ -204,6 +204,7 @@ function assignService(payload) {
   });
 
   upsertAssignmentRecord_(assignment, record);
+  applyServiceAllocationChange_(service, previousAssignment, record);
   SpreadsheetApp.flush();
 
   return {
@@ -251,6 +252,7 @@ function deleteRegistration(payload) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const formSheet = formResponsesSheet(ss);
   const assignment = assignmentSheet(ss);
+  const service = serviceSheet(ss);
   ensureAssignmentHeader(assignment);
 
   const formRows = formSheet.getDataRange().getValues();
@@ -268,6 +270,9 @@ function deleteRegistration(payload) {
   if (formTarget >= 2) {
     formSheet.deleteRow(formTarget);
   }
+  const assignmentRows = assignment.getDataRange().getValues();
+  const assignmentIndex = buildAssignmentRowIndex_(assignmentRows);
+  const deletedAssignment = assignmentIndex[responseKey] || assignmentIndex["source:" + sourceRow] || null;
   deleteAssignmentRecord_(assignment, {
     responseKey: responseKey,
     sourceRow: sourceRow,
@@ -275,6 +280,7 @@ function deleteRegistration(payload) {
     mobileNumber: payload.mobileNumber,
     age: payload.age
   });
+  applyServiceAllocationChange_(service, deletedAssignment, null);
 
   syncFormResponsesToMaster();
   return {
@@ -711,6 +717,20 @@ function updateServiceAllocationCount_(sheet, serviceName, category, delta) {
     row[columnIndex] = next;
     sheet.getRange(i + 1, 1, 1, values[0].length).setValues([row]);
     return;
+  }
+}
+
+function applyServiceAllocationChange_(serviceSheetInstance, previousRecord, nextRecord) {
+  const previousService = String(previousRecord && previousRecord.assignedService || "").trim();
+  const previousCategory = normalizeCategory_(previousRecord && previousRecord.assignedCategory || "");
+  const nextService = String(nextRecord && nextRecord.assignedService || "").trim();
+  const nextCategory = normalizeCategory_(nextRecord && nextRecord.assignedCategory || "");
+
+  if (previousService && previousCategory) {
+    updateServiceAllocationCount_(serviceSheetInstance, previousService, previousCategory, -1);
+  }
+  if (nextService && nextCategory) {
+    updateServiceAllocationCount_(serviceSheetInstance, nextService, nextCategory, 1);
   }
 }
 
